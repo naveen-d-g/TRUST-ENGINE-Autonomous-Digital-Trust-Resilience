@@ -1,0 +1,148 @@
+﻿
+> frontend@1.0.0 lint
+> eslint .
+
+
+E:\project\frontend\src\api\incident.api.ts
+  13:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\api\websocket.ts
+   2:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\app\layout\Sidebar.tsx
+  7:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\auth\AuthContext.tsx
+  59:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\project\frontend\src\components\DomainDashboard.tsx
+  19:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\RenderDiffs.tsx
+   7:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   8:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\charts\TrustLineChart.tsx
+  14:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\incidents\IncidentCommandPanel.tsx
+  28:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\intelligence\CorrelationGraph.tsx
+  54:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\intelligence\ExplainabilityPanel.tsx
+  58:71   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  58:113  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+E:\project\frontend\src\components\navigation\Sidebar.tsx
+  21:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\system\SystemHealthPanel.tsx
+  8:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\components\ui\DataTable.tsx
+  85:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\context\AppContext.jsx
+  109:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\project\frontend\src\context\LiveContext.jsx
+  128:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\project\frontend\src\context\ThemeContext.jsx
+  28:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\project\frontend\src\core\asyncState.ts
+  9:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\core\mappers\simulationMapper.ts
+  2:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\hooks\useRealtimeDashboard.ts
+  13:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\hooks\useRiskStream.ts
+  18:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\hooks\useWebSocket.ts
+  5:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\Audit\AuditExplorer.tsx
+  22:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  64:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\DomainDashboard.jsx
+  1:38  error  'useRef' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+E:\project\frontend\src\pages\Domains\DomainOverview.tsx
+  10:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\SOC\IncidentDetail.tsx
+  150:106  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  150:133  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:106  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:81   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:120  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:177  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:95   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\SOC\SocDashboard.tsx
+  47:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\SessionExplorer.jsx
+  104:6  warning  React Hook useEffect has a missing dependency: 'fetchSessions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\project\frontend\src\pages\SessionExplorer\SessionDetailsPage.tsx
+  144:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\SessionExplorer\SessionExplorerPage.tsx
+  100:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\pages\Simulation\AttackSimulationPage.tsx
+  18:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\services\eventBus.ts
+   1:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\services\liveSocket.ts
+  15:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\state\liveState.ts
+  12:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\store\replayStore.ts
+  4:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  8:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\store\sessionStore.ts
+  16:56  error    'get' is defined but never used           @typescript-eslint/no-unused-vars
+  27:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\theme\motionTokens.ts
+  3:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\types\api.ts
+  10:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\types\audit.ts
+  12:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\project\frontend\src\types\enforcement.ts
+  28:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 63 problems (4 errors, 59 warnings)
+

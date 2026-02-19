@@ -1,0 +1,23 @@
+type EventHandler = (payload: unknown) => void
+
+class EventBus {
+  private listeners: Record<string, EventHandler[]> = {}
+
+  on(event: string, handler: EventHandler) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = []
+    }
+    this.listeners[event].push(handler)
+  }
+
+  emit(event: string, payload: unknown) {
+    this.listeners[event]?.forEach(handler => handler(payload))
+  }
+
+  off(event: string, handler: EventHandler) {
+    this.listeners[event] =
+      this.listeners[event]?.filter(h => h !== handler) || []
+  }
+}
+
+export const eventBus = new EventBus()

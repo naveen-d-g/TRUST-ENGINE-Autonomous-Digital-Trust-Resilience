@@ -1,0 +1,62 @@
+{
+  "app": {
+    "name": "Trust Engine SOC Platform",
+    "tagline": "Autonomous Digital Trust & Resilience"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "soc": "SOC Console",
+    "incidents": "Incidents",
+    "sessions": "Sessions",
+    "simulation": "Simulation Lab",
+    "batch": "Batch Audit",
+    "users": "User Management",
+    "system": "System Health",
+    "audit": "Audit Logs"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Sign In",
+    "loginError": "Invalid credentials",
+    "sessionExpired": "Your session has expired"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "goBack": "Go Back",
+    "goHome": "Go Home",
+    "noData": "No data available",
+    "unauthorized": "You don't have permission to access this resource"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "info": "Info"
+  },
+  "status": {
+    "open": "Open",
+    "inProgress": "In Progress",
+    "contained": "Contained",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  }
+}
