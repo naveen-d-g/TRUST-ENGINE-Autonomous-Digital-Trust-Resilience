@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLiveIncidentStream } from '../../hooks/useLiveIncidentStream';
 import { useSocKeyboard } from '../../hooks/useSocKeyboard';
 import { DangerButton } from '../../components/DangerButton';
-import { LiveHeader } from '@/pages/SOC/components/LiveHeader';
+
 import { DecisionMatrix } from '@/pages/SOC/components/DecisionMatrix';
 import { Transitions } from '../../design/motion';
 

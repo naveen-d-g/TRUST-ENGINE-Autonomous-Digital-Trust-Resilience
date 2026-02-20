@@ -16,7 +16,7 @@ const SessionExplorer = React.lazy(() => import('./pages/SessionExplorer.jsx'));
 // Enterprise Pages
 const IntelligencePage = React.lazy(() => import('./pages/Intelligence/IntelligencePage'));
 const SystemHealthPage = React.lazy(() => import('./pages/System/SystemHealthPage'));
-const DomainOverview = React.lazy(() => import('./pages/Domains/DomainOverview'));
+const DomainOverview = React.lazy(() => import('./pages/Domain/DomainOverview'));
 const SessionExplorerPage = React.lazy(() => import('./pages/SessionExplorer/SessionExplorerPage'));
 const SessionDetailsPage = React.lazy(() => import('./pages/SessionExplorer/SessionDetailsPage'));
 

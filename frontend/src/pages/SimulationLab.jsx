@@ -67,8 +67,7 @@ const SimulationLab = () => {
     }
   };
 
-    }
-  };
+
 
   const runFullScenario = async () => {
     if (!activeSimId || processing) return;
