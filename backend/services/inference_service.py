@@ -22,6 +22,7 @@ class InferenceService:
         # Inject context if needed by pipeline
         features["session_id"] = session_id
         features["user_id"] = user_id
+        features["is_simulation"] = True
         
         # 1. Run Pipeline
         result = evaluate_single_session(features)
@@ -164,4 +165,11 @@ class InferenceService:
             # We log the error but return the result to the user so the service isn't blocked by DB issues
             print(f"Database Persistence Error: {str(e)}")
         
-        return result.to_dict()
+        # Format the response mapping to exactly what the frontend and routes expect
+        formatted_result = result.to_dict()
+        formatted_result["trust_score"] = 100.0 - result.risk_score
+        formatted_result["final_decision"] = result.decision
+        formatted_result["primary_cause"] = result.explanation.get("primary_cause", "Unknown")
+        formatted_result["recommended_action"] = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor"
+        
+        return formatted_result

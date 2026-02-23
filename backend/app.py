@@ -107,6 +107,8 @@ def create_app(config_class=Config):
     from backend.routes.live_routes import live_bp
     from backend.api.session_routes import session_bp
     from backend.api.monitoring_routes import monitoring_bp
+    from backend.api.enforcement_routes import enforcement_bp
+    from backend.routes.trust_routes import trust_bp
     
     app.register_blueprint(soc_bp, url_prefix="/api/v1/soc")
     app.register_blueprint(batch_bp, url_prefix="/api/v1/batch")
@@ -119,6 +121,17 @@ def create_app(config_class=Config):
     app.register_blueprint(live_bp, url_prefix="/api/v1/live")
     app.register_blueprint(session_bp, url_prefix="/api/v1/sessions")
     app.register_blueprint(monitoring_bp, url_prefix="/api/v1/monitoring")
+    app.register_blueprint(enforcement_bp, url_prefix="/api/v1/enforcement")
+    app.register_blueprint(trust_bp, url_prefix="/api/v1/trust")
+    
+    # 💥 DOMAIN KAFKA CONSUMER
+    try:
+        from backend.ingestion.domain_kafka_consumer import start_domain_consumer
+        start_domain_consumer()
+        print("[OK] Domain Kafka Consumer started")
+    except ImportError:
+        print("[WARN] confluent_kafka not installed, domain_kafka_consumer skipped.")
+
     
     @app.route("/")
     def index():
@@ -152,4 +165,4 @@ app = create_app()
 
 if __name__ == "__main__":
     # Support concurrent SSE streams and REST API calls
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)

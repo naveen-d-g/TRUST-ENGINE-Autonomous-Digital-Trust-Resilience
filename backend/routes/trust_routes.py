@@ -6,12 +6,13 @@ from backend.services.inference_service import InferenceService
 from backend.utils.logger import log_decision, log_error
 import pandas as pd
 import io
-from backend.utils.rbac import analyst_required
+from backend.auth.decorators import require_access
+from backend.contracts.enums import Role
 
 trust_bp = Blueprint('trust', __name__)
 
 @trust_bp.route("/evaluate", methods=["POST"])
-@analyst_required
+@require_access(role=Role.ANALYST)
 def evaluate_session():
     start_time = time.time()
     data = request.get_json(silent=True)
@@ -44,7 +45,7 @@ def evaluate_session():
         return jsonify(error="Inference Error", message=str(e)), 500
 
 @trust_bp.route("/batch", methods=["POST"])
-@analyst_required
+@require_access(role=Role.ANALYST)
 def batch_evaluate():
     start_time = time.time()
     

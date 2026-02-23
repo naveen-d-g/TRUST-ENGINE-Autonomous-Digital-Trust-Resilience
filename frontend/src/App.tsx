@@ -23,6 +23,7 @@ const SessionDetailsPage = React.lazy(() => import('./pages/SessionExplorer/Sess
 // Restored JSX Pages
 const LiveLoginDemo = React.lazy(() => import('./pages/LiveLoginDemo.jsx'));
 const SimulationLab = React.lazy(() => import('./pages/SimulationLab.jsx'));
+const Evaluate = React.lazy(() => import('./pages/Evaluate.jsx'));
 const BatchAudit = React.lazy(() => import('./pages/Batch/BatchPage'));
 const LiveView = React.lazy(() => import('./pages/LiveView.jsx'));
 
@@ -68,6 +69,9 @@ const App: React.FC = () => {
                     } />
                     <Route path="/simulation" element={
                         <Suspense fallback={<PageLoader />}><SimulationLab /></Suspense>
+                    } />
+                    <Route path="/trust-eval" element={
+                        <Suspense fallback={<PageLoader />}><Evaluate /></Suspense>
                     } />
 
                     <Route path="/soc" element={

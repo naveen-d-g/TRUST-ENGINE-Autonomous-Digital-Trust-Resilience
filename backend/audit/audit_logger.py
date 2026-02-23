@@ -6,21 +6,25 @@ import json
 class AuditLogger:
     @staticmethod
     def log_action(actor_id: str, action: str, target_id: str = None, payload: dict = None):
-        # Get last log for chaining
-        last_log = AuditLog.query.order_by(AuditLog.timestamp.desc()).first()
-        prev_hash = last_log.curr_hash if last_log else "0" * 64
+        # Get last log for chaining. Models use created_at, not timestamp.
+        last_log = AuditLog.query.order_by(AuditLog.created_at.desc()).first()
+        prev_hash = last_log.hash if last_log else "0" * 64
         
         # Compute current hash
         log_content = f"{prev_hash}{actor_id}{action}{json.dumps(payload or {})}"
         curr_hash = hashlib.sha256(log_content.encode()).hexdigest()
         
         log = AuditLog(
-            actor_id=actor_id,
+            actor=actor_id,
             action=action,
-            target_id=target_id,
-            payload=payload,
+            incident_id=target_id,         # Mapping target_id to incident_id as appropriate
+            details=payload or {},
             prev_hash=prev_hash,
-            curr_hash=curr_hash
+            hash=curr_hash,
+            role=payload.get("role", "system") if payload else "system",
+            platform=payload.get("platform", "SECURITY_PLATFORM") if payload else "SECURITY_PLATFORM",
+            request_id=payload.get("req_id", "unknown") if payload else "unknown",
+            tenant_id="DEFAULT"
         )
         db.session.add(log)
         db.session.commit()

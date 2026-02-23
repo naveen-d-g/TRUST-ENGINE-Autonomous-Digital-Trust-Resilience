@@ -18,6 +18,8 @@ const SOC = lazy(() => import("@/pages/SOC/UnifiedSocMonitor"))
 const LiveMonitor = SOC // Unified component for both routes
 const IncidentDetails = lazy(() => import("@/pages/SOC/IncidentDetail"))
 const HomeV1 = lazy(() => import("@/pages/public/HomeV1"))
+// Trust Evaluation
+const Evaluate = lazy(() => import("@/pages/Evaluate.jsx"))
 
 // Home Landing
 const WebSecurity = lazy(() => import("@/pages/Domain/WebSecurity"))
@@ -58,6 +60,7 @@ export const AppRouter = () => {
             <Route path="/live" element={<LiveMonitor />} />
             <Route path="/soc/incidents/:id" element={<IncidentDetails />} />
             <Route path="/batch" element={<BatchPage />} />
+            <Route path="/trust-eval" element={<Evaluate />} />
             
             {/* Domain Routes */}
             <Route path="/domain" element={<DomainOverview />} />

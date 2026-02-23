@@ -142,7 +142,12 @@ const WebSecurityPage = () => {
                               </td>
                               <td className="px-6 py-4">
                                   <div className="flex flex-col">
-                                      <span className="text-white font-medium mb-1">{event.type}</span>
+                                      <span className="text-white font-medium mb-1 flex items-center gap-2">
+                                          {event.type}
+                                          {event.source === "TARGET_APP_3001" && (
+                                              <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30">SIM-TARGET</span>
+                                          )}
+                                      </span>
                                       <span className="text-xs font-mono text-gray-500">
                                           {`{ "endpoint": "${event.route}", "ip": "${event.ip}", "decision": "${event.decision}" }`}
                                       </span>

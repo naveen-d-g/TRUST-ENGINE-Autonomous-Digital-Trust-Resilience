@@ -13,6 +13,7 @@ import {
   Cpu,
   Wifi,
   Zap,
+  ShieldCheck,
   LucideIcon,
 } from 'lucide-react';
 import { useSocPolling } from '../../hooks/useSocPolling';
@@ -81,6 +82,7 @@ export const Sidebar: React.FC = () => {
         </div>
         <NavItem to="/dashboard" icon={Zap} label="Main Dashboard" />
         <NavItem to="/soc" icon={Activity} label="SOC Monitor" />
+        <NavItem to="/trust-eval" icon={ShieldCheck} label="Trust Evaluation" />
         <NavItem to="/soc/incidents" icon={ShieldAlert} label="Incidents" />
         <NavItem to="/soc/proposals" icon={FileText} label="Proposals" />
         <NavItem to="/sessions" icon={HistoryIcon} label="Session Explorer" />

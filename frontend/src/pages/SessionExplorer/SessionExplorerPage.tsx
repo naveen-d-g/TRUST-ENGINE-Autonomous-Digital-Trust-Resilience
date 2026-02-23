@@ -57,6 +57,15 @@ const SessionExplorerPage = () => {
       )
     },
     {
+      header: "Status",
+      accessorKey: "decision" as keyof SessionModel,
+      cell: (item: SessionModel) => (
+        <Badge variant={item.decision === "TERMINATE" || item.decision === "TERMINATED" ? "danger" : "success"}>
+            {item.decision === "TERMINATE" || item.decision === "TERMINATED" ? "TERMINATED" : "ACTIVE"}
+        </Badge>
+      )
+    },
+    {
       header: "Events",
       accessorKey: "event_count" as keyof SessionModel,
       cell: (item: SessionModel) => <span className="text-gray-400">{item.anomalyCount || 0}</span>

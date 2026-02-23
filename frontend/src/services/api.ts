@@ -234,6 +234,7 @@ export const trustService = {
   batch: (formData: FormData) => api.post<any>('/api/v1/trust/batch', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  evaluate: (data: any) => api.post<any>('/api/v1/trust/evaluate', data),
   simulate: (data: any) => api.post<any>('/api/v1/simulate', data),
 };
 
@@ -251,4 +252,17 @@ export const simulationService = {
   endSimulation: (simId: string) => api.post<any>('/api/v1/simulate/end', { simulation_id: simId }), 
   recordEvent: (simId: string, eventType: string, metadata: any = {}) => 
     api.post<any>('/api/v1/simulate/event', { simulation_id: simId, event_type: eventType, features: metadata }),
+};
+
+export const userService = {
+  listUsers: () => api.get<any>('/api/v1/auth/users'),
+  createUser: (data: any) => api.post<any>('/api/v1/auth/users', data),
+  updateUser: (userId: string, data: any) => api.put<any>(`/api/v1/auth/users/${userId}`, data),
+  deleteUser: (userId: string) => api.delete<any>(`/api/v1/auth/users/${userId}`),
+  quarantineUser: (userId: string) => api.post<any>(`/api/v1/enforcement/users/${userId}/terminate`),
+  getUserProfile: (userId: string) => api.get<any>(`/api/v1/auth/users/${userId}/profile`)
+};
+
+export const socService = {
+  getAuditLogs: () => api.get<any>('/api/v1/soc/audit')
 };

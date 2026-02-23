@@ -140,10 +140,13 @@ class IngestionService:
         session_copy = raw_session.copy()
         
         # Serialize 'events' deque/list of Event objects to list of dicts
-        # The ML features extractors expect dicts with .get(), not Event objects
+        # B. Prepare Inference Request
+        # Serialize 'events' deque/list of Event objects to list of dicts safely
         if "events" in session_copy:
-            session_copy["events"] = [e.to_dict() for e in session_copy["events"]]
-        
+            # Create a localized deep copy of the events list to avoid 
+            # 'RuntimeError: deque mutated during iteration' from concurrent REST requests
+            safe_events = list(session_copy["events"])
+            session_copy["events"] = [e.to_dict() for e in safe_events]
         # B. Prepare Inference Request
         inference_payload = {
             "session_id": session_id,

@@ -64,6 +64,10 @@ def evaluate_session(session_state: Dict[str, Any], context: Dict[str, Any] = No
     # Combine all
     combined_features = {
         "session_id": session_state.get("session_id", "unknown"),
+        "session_duration_sec": float(session_state.get("session_duration_sec", 0.0)),
+        "headless_browser_flag": int(session_state.get("headless_browser_flag", 0)),
+        "bot_probability_score": float(session_state.get("bot_probability_score", 0.0)),
+        "distinct_paths_count": int(session_state.get("distinct_paths_count", 0)),
         **f_web, **f_api, **f_auth, **f_net, **f_sys, **f_meta
     }
     

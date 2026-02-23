@@ -170,7 +170,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   terminateSession: async (sessionId: string) => {
     try {
-      await api.post(`/api/soc/sessions/${sessionId}/terminate`, {});
+      await api.post(`/api/v1/enforcement/terminate_session`, { session_id: sessionId });
       
       // Optimistic update
       const { sessions, selectedSession } = get();

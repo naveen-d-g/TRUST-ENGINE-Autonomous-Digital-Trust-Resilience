@@ -223,7 +223,11 @@ const SessionDetailsPage = () => {
                      {session.riskScore > 50 && (
                         <li>Watchlist added for IP subnet {session.ipAddress.split('.').slice(0,3).join('.')}.x</li>
                      )}
-                     {session.riskScore > 80 && (
+                     {session.riskScore > 85 ? (
+                        <li className="text-neonRed font-bold flex items-center gap-2">
+                            [ Recommended: Terminate Session ] - Critical risk threshold exceeded.
+                        </li>
+                     ) : session.riskScore > 80 && (
                         <li>Recommend forcing password reset if velocity persists.</li>
                      )}
                  </ul>

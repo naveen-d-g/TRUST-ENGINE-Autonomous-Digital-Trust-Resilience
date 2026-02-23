@@ -63,8 +63,12 @@ def require_role(required_role):
             if platform != "SECURITY_PLATFORM":
                 return jsonify({"error": "Invalid platform", "code": "PLATFORM_VIOLATION"}), 403
 
-            if role != required_role:
-                 return jsonify({"error": "Insufficient Privileges", "code": "ROLE_VIOLATION"}), 403
+            if isinstance(required_role, list):
+                if role not in required_role:
+                    return jsonify({"error": "Insufficient Privileges", "code": "ROLE_VIOLATION"}), 403
+            else:
+                if role != required_role:
+                     return jsonify({"error": "Insufficient Privileges", "code": "ROLE_VIOLATION"}), 403
 
             return fn(*args, **kwargs)
         return wrapper

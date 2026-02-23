@@ -47,7 +47,15 @@ export const Sidebar = () => {
         <NavItem to="/trust-eval" icon={ShieldCheck} label="Trust Evaluation" />
         <NavItem to="/batch" icon={FileStack} label="Batch Process" />
         <NavItem to="/simulation" icon={Crosshair} label="Attack Simulation" />
-        <NavItem to="/demo" icon={User} label="Live Login Demo" />
+        <a 
+          href="http://localhost:3001" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group text-emerald-400 hover:text-white hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20"
+        >
+          <User className="w-5 h-5" />
+          <span className="font-bold text-xs uppercase tracking-widest">Live Login Demo</span>
+        </a>
         <NavItem to="/users" icon={Users} label="User Management" />
 
         <div className="pt-6 pb-2 px-4">

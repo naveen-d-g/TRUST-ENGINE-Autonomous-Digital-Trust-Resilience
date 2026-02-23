@@ -121,11 +121,11 @@ const LiveView = () => {
 
             {/* Terminal Feed */}
             <div className="flex-1 bg-black/90 rounded-xl border border-border shadow-inner overflow-hidden flex flex-col font-mono relative">
-                 {/* Status Bar */}
+                {/* Status Bar */}
                 <div className="bg-muted/20 border-b border-border/20 px-4 py-2 flex justify-between items-center text-xs text-muted-foreground">
                     <span>STATUS: {error ? "OFFLINE" : "CONNECTED"}</span>
-                    <span>SOURCE: gateway-primary</span>
-                    <span>PROTOCOL: HTTP/2</span>
+                    <span>SOURCE: <span className="text-purple-400 font-bold ml-1">TARGET_APP_3001</span></span>
+                    <span>PROTOCOL: WSS-EVENT-STREAM</span>
                 </div>
                 
                 {/* Events Log - Newest at Top */}
