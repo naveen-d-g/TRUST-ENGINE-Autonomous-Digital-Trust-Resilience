@@ -11,6 +11,7 @@ class Event:
     """
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str = "unknown_session"
+    actor_id: Optional[str] = None 
     event_type: str = "unknown"  # http, api, auth, network, infra
     timestamp_epoch: float = field(default_factory=time.time)
     source: str = "unknown"      # web, api_gateway, firewall, server

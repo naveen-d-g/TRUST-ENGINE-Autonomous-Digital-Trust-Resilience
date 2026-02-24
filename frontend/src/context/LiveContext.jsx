@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMonitoringStore } from '../store/monitoringStore';
 import { api } from '../services/api';
 import { runtimeConfig } from '../config/runtimeConfig';
+import { eventBus } from '../services/eventBus';
 
 const LiveContext = createContext();
 
@@ -57,16 +58,27 @@ export const LiveProvider = ({ children }) => {
                   domain: data.domain || 'WEB',
                   timestamp: data.timestamp_epoch ? new Date(data.timestamp_epoch * 1000).toISOString() : new Date().toISOString(),
                   ip: data.raw_features?.ip || data.ip || '0.0.0.0',
-                  route: data.raw_features?.path || data.raw_features?.endpoint || data.route || '/',
-                  riskScore: data.risk_score || 0,
-                  decision: data.final_decision && data.final_decision !== 'ALLOW' 
-                      ? data.final_decision 
+                  route: data.raw_features?.path || data.raw_features?.endpoint || data.raw_features?.payload?.route || data.route || '/',
+                  riskScore: data.risk_score || data.raw_features?.risk_score || data.raw_features?.payload?.risk_score || 0,
+                  decision: (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision) && 
+                            (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision) !== 'ALLOW' 
+                      ? (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision)
                       : (data.risk_score > 85 ? 'ESCALATE' : data.risk_score > 50 ? 'RESTRICT' : 'ALLOW'),
                   suggestion: data.recommendation || 'None',
                   payload: data.raw_features || {},
                   type: data.event_type || 'unknown' // Ensure type is present
               };
               addEvent(monitorEvt);
+              
+              // Trigger Global Notification Toast
+              if (monitorEvt.decision === 'ESCALATE' || monitorEvt.decision === 'RESTRICT' || monitorEvt.riskScore >= 70) {
+                  const userStr = data.actor_id && data.actor_id !== 'anonymous' ? data.actor_id : 'Unknown';
+                  const sessionStr = data.session_id ? data.session_id.substring(0, 8) : 'Unknown';
+                  eventBus.emit('notification', {
+                      message: `Critical Threat: ${monitorEvt.domain} attack from ${monitorEvt.ip} (User: ${userStr} | Session: ${sessionStr})`,
+                      severity: monitorEvt.decision === 'RESTRICT' ? 'error' : 'warning'
+                  });
+              }
               
               if (data.event_type === 'auth' && data.raw_features?.status === 'failed') {
                 setAlert({

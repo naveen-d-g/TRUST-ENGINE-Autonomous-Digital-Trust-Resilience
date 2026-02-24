@@ -108,7 +108,14 @@ const SessionDetailsPage = () => {
              <ArrowLeft className="w-4 h-4" />
            </Button>
            <h1 className="text-2xl font-bold text-white tracking-wide">Session Intelligence</h1>
-           <span className="text-gray-500 font-mono text-sm">{session.id}</span>
+           <span className="text-gray-500 font-mono text-sm mr-2">{session.id}</span>
+           
+           <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-gray-800">
+             <div className={`w-2 h-2 rounded-full ${session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? 'bg-gray-600' : 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`} />
+             <span className={session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : "text-neonGreen font-bold uppercase tracking-wider text-[10px]"}>
+               {session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? "Offline" : "Online"}
+             </span>
+           </div>
         </div>
         
         <div className="flex gap-2">

@@ -71,10 +71,13 @@ class IngestionService:
             # Fallback logic: stickiness by IP? 
             # For now, generate random if missing, but ideally passed by caller
             session_id = payload.get("ip_address", "unknown_session")
+            
+        actor_id = payload.get("actor_id")
         
         # separate raw features from metadata
         raw_features = payload.copy()
         if "session_id" in raw_features: del raw_features["session_id"]
+        if "actor_id" in raw_features: del raw_features["actor_id"]
         
         # 🧪 INFRA/NETWORK FLATTENING: Ensure frontend sees a flat dictionary
         # If 'features' exists (from common adapters), merge it upward
@@ -84,6 +87,7 @@ class IngestionService:
         
         event = Event(
             session_id=str(session_id),
+            actor_id=str(actor_id) if actor_id else None,
             event_type=event_type,
             source=source,
             timestamp_epoch=time.time(),

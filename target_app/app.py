@@ -35,7 +35,8 @@ def send_event(domain: str, event_type: str, session_id: str, actor_id: str, pay
         "event_id": event_id,
         "session_id": session_id or "anonymous",
         "actor_id": actor_id or "anonymous",
-        "event_type": domain.lower() if domain in ["WEB", "API", "NETWORK", "SYSTEM"] else "web",
+        "event_type": event_type,  # ACTUAL event type, e.g., 'AUTH_LOGIN'
+        "domain": domain,          # Keep domain tracking for routing
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source": "TARGET_APP_3001",
         "payload": payload
@@ -233,6 +234,23 @@ def dashboard():
     """
     return render_template_string(html)
 
+@app.route("/logout")
+def logout():
+    sess_id = session.get("session_id")
+    actor_id = session.get("actor_id", "Unknown")
+    
+    if sess_id:
+        # Broadcast logout signal to SOC
+        send_event("AUTH", "AUTH_LOGOUT", sess_id, actor_id, {
+            "status_code": 200,
+            "metrics": {},
+            "final_decision": "TERMINATE" # Signal that the session is officially over
+        })
+        ACTIVE_SESSIONS.pop(sess_id, None)
+        
+    session.clear()
+    return redirect(url_for("login"))
+
 @app.route("/api/data")
 def api_data():
     sess_id = session.get("session_id")
@@ -287,14 +305,6 @@ def keepalive():
         "metrics": {"cpu_usage_percent": 12, "memory_mb": 256}
     })
     return jsonify({"status": "ok"})
-
-@app.route("/logout")
-def logout():
-    sess_id = session.get("session_id")
-    if sess_id and sess_id in ACTIVE_SESSIONS:
-        ACTIVE_SESSIONS.pop(sess_id)
-    session.clear()
-    return redirect(url_for("login"))
 
 
 # ENFORCEMENT HOOK (Trust Engine calls this)

@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom"
 import { LayoutGrid, Search, ShieldCheck, FileStack, Activity, Crosshair, User, Users, Shield, Globe, Server, Wifi, Cpu, LucideIcon } from "lucide-react"
-import { useAuthStore } from "@/store/authStore"
 import clsx from "clsx"
 
 const NavItem = ({ to, icon: Icon, label }: { to: string, icon: LucideIcon, label: string }) => {
@@ -23,9 +22,6 @@ const NavItem = ({ to, icon: Icon, label }: { to: string, icon: LucideIcon, labe
 }
 
 export const Sidebar = () => {
-  const user = useAuthStore(state => state.user)
-  const logout = useAuthStore(state => state.logout)
-  
   return (
     <aside className="w-64 bg-[#0A0E14] border-r border-gray-800/40 flex flex-col h-screen fixed left-0 top-0 z-50 shadow-2xl">
       <div className="p-8 border-b border-gray-800/20">
@@ -72,39 +68,6 @@ export const Sidebar = () => {
         <NavItem to="/domain/infra" icon={Cpu} label="System Security" />
       </nav>
 
-      <div className="p-4 flex flex-col gap-4">
-        {/* System Health Block */}
-        <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl backdrop-blur-md">
-           <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center justify-between">
-              <span>Core Health</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-           </div>
-           <div className="flex items-center gap-3">
-              <Activity className="w-4 h-4 text-emerald-500" />
-              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">SYSTEM ONLINE</span>
-           </div>
-        </div>
-
-        {/* User Profile Block */}
-        <div className="p-4 bg-gray-900/40 border border-gray-800/60 rounded-2xl">
-           <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center">
-                 <span className="font-black text-blue-400">V</span>
-              </div>
-              <div className="flex flex-col min-w-0">
-                 <span className="text-[10px] font-black text-white truncate uppercase tracking-tighter">{user?.email || "ADMIN@TRUSTENGINE.AI"}</span>
-                 <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest italic">{user?.role || "ADMIN"}</span>
-              </div>
-           </div>
-           
-           <button 
-             onClick={logout}
-             className="w-full py-2.5 bg-gray-800/40 hover:bg-red-500/10 hover:text-red-400 border border-gray-700/50 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group"
-           >
-             Terminal Logout
-           </button>
-        </div>
-      </div>
     </aside>
   )
 }

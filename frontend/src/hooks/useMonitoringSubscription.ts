@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMonitoringStore } from '../store/monitoringStore';
 import { runtimeConfig } from '../config/runtimeConfig';
+import { eventBus } from '../services/eventBus';
 
 export const useMonitoringSubscription = () => {
   const addEvent = useMonitoringStore(state => state.addEvent);
@@ -34,7 +35,7 @@ export const useMonitoringSubscription = () => {
             // We also need to ensure 'decision' and 'suggestion' are present if missing
             
             const evt = {
-                id: data.event_id,
+                id: data.event_id || `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 domain: data.domain || 'WEB', // Fallback
                 timestamp: data.timestamp_epoch ? new Date(data.timestamp_epoch * 1000).toISOString() : new Date().toISOString(),
                 ip: data.raw_features?.ip || data.ip || '0.0.0.0',
@@ -45,7 +46,16 @@ export const useMonitoringSubscription = () => {
                 payload: data.raw_features || {}
             };
             
+            // Dispatch to central store
             addEvent(evt as any);
+
+            // Globally trigger a toast popup if the Engine blocked/escalated this immediately
+            if (evt.decision === 'ESCALATE' || evt.decision === 'RESTRICT' || evt.riskScore >= 70) {
+                eventBus.emit('notification', {
+                    message: `Critical Threat: ${evt.domain} attack blocked from ${evt.ip}`,
+                    severity: 'error'
+                });
+            }
 
           } catch (err) {
             console.error("[MonitoringSub] Parse Error", err);

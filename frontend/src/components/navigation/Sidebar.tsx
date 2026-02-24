@@ -99,39 +99,6 @@ export const Sidebar: React.FC = () => {
         <NavItem to="/domain/system" icon={Cpu} label="System" />
       </nav>
 
-      {/* System Status & User Section */}
-      <div className="p-4 flex flex-col gap-4">
-        {/* System Health */}
-        <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-          <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3 flex justify-between items-center">
-            <span>System Health</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Core Online</span>
-          </div>
-        </div>
-
-        {/* User Card */}
-        <div className="p-3 bg-gray-900/40 border border-gray-800/60 rounded-xl">
-           <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/20 flex items-center justify-center">
-                 <span className="text-[10px] font-black text-blue-400">V</span>
-              </div>
-              <div className="flex flex-col min-w-0">
-                 <span className="text-[10px] font-black text-white truncate uppercase tracking-tighter">Viewer001@view</span>
-                 <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Viewer</span>
-              </div>
-           </div>
-           
-           <button 
-              className="w-full py-2 bg-gray-800/40 hover:bg-red-500/10 hover:text-red-400 border border-gray-700/50 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 group"
-           >
-              Terminal Logout
-           </button>
-        </div>
-      </div>
     </div>
   );
 };

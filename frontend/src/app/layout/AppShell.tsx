@@ -14,13 +14,13 @@ export const AppShell = ({ children }: Props) => {
   useGlobalKeyboard() // Hook for global shortcuts
 
   return (
-    <div className="flex h-screen bg-bgDark text-white overflow-hidden font-sans">
+    <div className="flex h-screen bg-bgDark text-white font-sans overflow-x-hidden">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col ml-64 transition-all duration-300">
+      <div className="flex-1 flex flex-col ml-64 transition-all duration-300 relative z-10">
         <Topbar />
         
-        <main className="flex-1 overflow-auto p-6 relative">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 relative z-0">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

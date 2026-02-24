@@ -1,7 +1,28 @@
-import React from 'react';
-import { Sun, Bell, Settings, User as UserIcon } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Sun, Bell, Settings, User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 export const Topbar: React.FC = () => {
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/demo');
+  };
   return (
     <header className="h-16 border-b border-gray-800/40 bg-gray-900/10 flex items-center justify-between px-8 backdrop-blur-md">
       {/* Dashboard Title */}
@@ -23,14 +44,45 @@ export const Topbar: React.FC = () => {
         </div>
         
         {/* User Profile */}
-        <div className="flex items-center gap-4 pl-6 border-l border-gray-800/60">
-           <div className="flex flex-col items-end">
-              <span className="text-[10px] font-black text-white uppercase tracking-tighter">viewer001@view</span>
-              <span className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">Viewer</span>
-           </div>
-           <div className="w-9 h-9 rounded-xl bg-gray-800/40 border border-gray-700/60 flex items-center justify-center relative group cursor-pointer hover:bg-gray-800/60 transition-all">
-              <UserIcon className="w-4 h-4 text-gray-300" />
-           </div>
+        <div className="relative" ref={menuRef}>
+            <div 
+              className="flex items-center gap-4 pl-6 border-l border-gray-800/60 cursor-pointer group"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+               <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black text-white uppercase tracking-tighter">
+                     {user?.email || user?.username || 'GUEST'}
+                  </span>
+                  <span className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">
+                     {user?.role || 'VIEWER'}
+                  </span>
+               </div>
+               <div className="flex items-center gap-2">
+                 <div className="w-9 h-9 rounded-xl bg-gray-800/40 border border-gray-700/60 flex items-center justify-center group-hover:bg-gray-800/60 transition-all">
+                    <UserIcon className="w-4 h-4 text-gray-300" />
+                 </div>
+                 <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+               </div>
+            </div>
+
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-4 w-64 bg-[#0A0D14] border border-gray-800/60 rounded-xl shadow-2xl overflow-hidden py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-gray-800/60 bg-white/[0.02]">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</div>
+                    <div className="text-xs font-black text-white truncate">{user?.email || user?.username}</div>
+                  </div>
+                  <div className="p-2">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-xs font-bold uppercase tracking-widest"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Terminal Logout
+                    </button>
+                  </div>
+              </div>
+            )}
         </div>
       </div>
     </header>

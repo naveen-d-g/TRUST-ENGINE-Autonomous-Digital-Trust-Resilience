@@ -48,21 +48,37 @@ export const useMonitoringStore = create<MonitoringStore>((set) => ({
   system: { ...initialDomainState },
 
   addEvent: (event) => set((state) => {
-    const domainKey = event.domain.toLowerCase() as keyof Omit<MonitoringStore, 'addEvent' | 'reset'>;
-    const currentDomain = state[domainKey];
+    let domainKey = (event.domain || 'WEB').toLowerCase() as keyof Omit<MonitoringStore, 'addEvent' | 'reset'>;
     
-    // Update Metrics
-    const total = currentDomain.metrics.total + 1;
-    const escalated = event.decision === 'ESCALATE' ? currentDomain.metrics.escalated + 1 : currentDomain.metrics.escalated;
-    const suspicious = event.decision === 'RESTRICT' ? currentDomain.metrics.suspicious + 1 : currentDomain.metrics.suspicious;
-    const riskAvg = ((currentDomain.metrics.riskAvg * currentDomain.metrics.total) + event.riskScore) / total;
+    // Fallback to 'web' if the domain is not one of the pre-defined states to prevent crash
+    if (!state[domainKey]) {
+        domainKey = 'web';
+    }
+
+    const currentDomain = state[domainKey];
+    if (!currentDomain) return state; // Hard safety net
+    
+    // Update Metrics safely
+    const m = currentDomain.metrics || { total: 0, escalated: 0, riskAvg: 0, suspicious: 0 };
+    const total = m.total + 1;
+    const escalated = event.decision === 'ESCALATE' ? m.escalated + 1 : m.escalated;
+    const suspicious = event.decision === 'RESTRICT' ? m.suspicious + 1 : m.suspicious;
+    
+    // Clamp Risk Score to prevent 9890% bugs
+    const safeRiskScore = Math.min(100, Math.max(0, Number(event.riskScore) || 0));
+    const riskAvg = ((m.riskAvg * m.total) + safeRiskScore) / total;
 
     // Update Trend (Rolling 60 points window)
-    const newTrend = [...currentDomain.trend, { time: new Date().toLocaleTimeString(), value: event.riskScore }];
+    const currentTrend = currentDomain.trend || [];
+    const newTrend = [...currentTrend, { time: new Date().toLocaleTimeString(), value: safeRiskScore }];
     if (newTrend.length > 60) newTrend.shift();
 
     // Update Events (Keep last 50)
-    const newEvents = [event, ...currentDomain.events].slice(0, 50);
+    const currentEvents = currentDomain.events || [];
+    
+    // Add safeRiskScore to the event object
+    const safeEvent = { ...event, riskScore: safeRiskScore };
+    const newEvents = [safeEvent, ...currentEvents].slice(0, 50);
 
     return {
       [domainKey]: {

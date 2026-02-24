@@ -59,11 +59,17 @@ const SessionExplorerPage = () => {
     {
       header: "Status",
       accessorKey: "decision" as keyof SessionModel,
-      cell: (item: SessionModel) => (
-        <Badge variant={item.decision === "TERMINATE" || item.decision === "TERMINATED" ? "danger" : "success"}>
-            {item.decision === "TERMINATE" || item.decision === "TERMINATED" ? "TERMINATED" : "ACTIVE"}
-        </Badge>
-      )
+      cell: (item: SessionModel) => {
+        const isOffline = item.decision === "TERMINATE" || item.decision === "TERMINATED";
+        return (
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-gray-600' : 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`} />
+            <span className={isOffline ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : "text-neonGreen font-bold uppercase tracking-wider text-[10px]"}>
+              {isOffline ? "Offline" : "Online"}
+            </span>
+          </div>
+        )
+      }
     },
     {
       header: "Events",

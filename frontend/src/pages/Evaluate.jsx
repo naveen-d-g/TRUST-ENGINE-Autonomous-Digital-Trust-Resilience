@@ -140,13 +140,23 @@ const Evaluate = () => {
             current.sessions.add(actualSessionId);
         }
         current.event_count++;
-        current.latest_risk = evt.risk_score || evt.raw_features?.risk_score || current.latest_risk;
-        current.latest_decision = evt.final_decision || evt.raw_features?.final_decision || current.latest_decision;
+        current.latest_risk = evt.risk_score || evt.raw_features?.risk_score || evt.raw_features?.payload?.risk_score || current.latest_risk;
+        current.latest_decision = evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision || current.latest_decision;
         current.last_seen = evt.timestamp_epoch || current.last_seen;
-        if (evt.final_decision === 'TERMINATED' || evt.raw_features?.final_decision === 'TERMINATED' || terminationStatus[key] === 'terminated') {
+        
+        const decision = evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision;
+        if (decision === 'TERMINATED' || decision === 'TERMINATE' || terminationStatus[key] === 'terminated') {
             current.is_terminated = true;
             current.latest_decision = 'TERMINATED';
-            current.latest_risk = 100;
+            current.latest_risk = 0; // Reset risk to 0 on logout/termination so it doesn't show 100% red indefinitely 
+        } else if (evt.event_type === 'auth' || evt.event_type === 'AUTH_LOGIN' || evt.raw_features?.event_type === 'AUTH_LOGIN') {
+            // ONLY explicitly revive on a fresh login to prevent delayed ghost-pings from reviving dead sessions
+            if (terminationStatus[key] !== 'terminated') {
+                current.is_terminated = false;
+                if (current.latest_decision === 'TERMINATED') {
+                    current.latest_decision = evt.final_decision || evt.raw_features?.final_decision || 'ALLOW';
+                }
+            }
         }
         current.history.push({
             type: evt.event_type || 'UNK',
@@ -290,6 +300,14 @@ const Evaluate = () => {
                           <td className="p-4 relative">
                              <div className="font-bold text-white mb-1 flex items-center gap-2">
                                 <User className="w-4 h-4 text-emerald-500" /> {user.actor_id}
+                                
+                                <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-0.5 rounded-full border border-gray-800 ml-2">
+                                  <div className={`w-2 h-2 rounded-full ${user.is_terminated || terminationStatus[user.id] === 'terminated' ? 'bg-gray-600' : 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`} />
+                                  <span className={user.is_terminated || terminationStatus[user.id] === 'terminated' ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : "text-neonGreen font-bold uppercase tracking-wider text-[10px]"}>
+                                    {user.is_terminated || terminationStatus[user.id] === 'terminated' ? "Offline" : "Online"}
+                                  </span>
+                                </div>
+                                
                                 {expandedRows.has(user.id) ? (
                                     <ChevronUp className="w-3.5 h-3.5 text-slate-500 ml-1 transition-transform group-hover:text-white" />
                                 ) : (
@@ -310,8 +328,8 @@ const Evaluate = () => {
                           </td>
                           <td className="p-4">
                              <div className="flex items-center gap-2">
-                                <span className={`font-mono font-bold ${user.latest_risk >= 80 ? 'text-danger' : user.latest_risk >= 40 ? 'text-yellow-500' : 'text-success'}`}>{user.latest_risk.toFixed(1)}</span>
-                                <span className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded ${user.latest_decision === 'ALLOW' ? 'bg-success/10 text-success' : user.latest_decision === 'RESTRICT' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-danger/10 text-danger'}`}>
+                                <span className={`font-mono font-bold ${user.latest_risk >= 80 ? 'text-red-500' : user.latest_risk >= 40 ? 'text-amber-500' : 'text-emerald-500'}`}>{user.latest_risk.toFixed(1)}</span>
+                                <span className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded ${user.latest_decision === 'ALLOW' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : user.latest_decision === 'RESTRICT' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
                                    {user.latest_decision}
                                 </span>
                              </div>

@@ -8,11 +8,21 @@ import {
   Lock 
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useSystemStore } from '@/store/domain/systemStore';
 
 const HomeV1: React.FC = () => {
     const navigate = useNavigate();
     const user = useAuthStore(state => state.user);
     const isAnalyst = user?.role === 'ANALYST' || user?.role === 'ADMIN';
+    const systemStatus = useSystemStore(state => state.status);
+
+    const getStatusDisplay = () => {
+        if (systemStatus === 'healthy') return { text: 'SYSTEM ONLINE', color: 'text-emerald-400', dot: 'bg-emerald-500', glow: 'shadow-[0_0_8px_rgba(16,185,129,0.4)]' };
+        if (systemStatus === 'degraded') return { text: 'SYSTEM DEGRADED', color: 'text-amber-400', dot: 'bg-amber-500', glow: 'shadow-[0_0_8px_rgba(245,158,11,0.4)]' };
+        return { text: 'SYSTEM CRITICAL', color: 'text-red-400', dot: 'bg-red-500', glow: 'shadow-[0_0_8px_rgba(239,68,68,0.4)]' };
+    };
+
+    const display = getStatusDisplay();
 
     return (
         <div className="relative min-h-full flex flex-col items-center justify-start pt-12 bg-[#05080D]">
@@ -58,9 +68,10 @@ const HomeV1: React.FC = () => {
 
                     <button
                         onClick={() => navigate('/system-health')}
-                        className="px-10 py-5 bg-[#1A1F2E]/60 text-gray-400 font-black uppercase tracking-[0.2em] text-xs rounded-xl border border-gray-800/60 backdrop-blur-md transition-all duration-300 hover:bg-[#1A1F2E]/80 hover:text-white hover:border-gray-700 active:scale-95"
+                        className="px-10 py-5 bg-[#1A1F2E]/60 font-black uppercase tracking-[0.2em] text-xs rounded-xl border border-gray-800/60 backdrop-blur-md transition-all duration-300 hover:bg-[#1A1F2E]/80 hover:border-gray-700 active:scale-95 flex items-center gap-3"
                     >
-                        System Status
+                        <div className={`w-2 h-2 rounded-full ${display.dot} animate-pulse ${display.glow}`}></div>
+                        <span className={display.color}>{display.text}</span>
                     </button>
                 </div>
             </motion.div>
