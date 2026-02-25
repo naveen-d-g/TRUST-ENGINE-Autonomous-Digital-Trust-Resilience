@@ -27,6 +27,10 @@ class Session(db.Model):
     session_duration_sec = db.Column(db.Integer, default=0)
     risk_reasons = db.Column(db.JSON) # Stores contributing factors as JSON
     
+    # Bot Detection Fields
+    bot_detected = db.Column(db.Boolean, default=False)
+    bot_reason = db.Column(db.Text, nullable=True)
+    
     # Source tracking: PROD (Real-time), BATCH (Uploaded), DEMO (Simulated)
     source = db.Column(db.String(20), default="PROD", index=True)
 
@@ -47,6 +51,8 @@ class Session(db.Model):
             "recommended_action": self.recommended_action,
             "ip_address": self.ip_address,
             "session_duration_sec": self.session_duration_sec,
+            "bot_detected": self.bot_detected,
+            "bot_reason": self.bot_reason,
             "source": self.source
         }
 
@@ -232,6 +238,7 @@ class User(db.Model):
     # Merged User fields
     email = db.Column(db.String(255), unique=True, nullable=True) # Ensure app can use email
     password_hash = db.Column(db.String(255), nullable=True) # Ensure app can use password_hash
+    password_reset_required = db.Column(db.Boolean, default=False)
     
     api_key_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -243,6 +250,7 @@ class User(db.Model):
             "email": self.email,
             "role": self.role,
             "platform": self.platform,
+            "password_reset_required": self.password_reset_required,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 

@@ -143,12 +143,18 @@ const Evaluate = () => {
         current.latest_risk = evt.risk_score || evt.raw_features?.risk_score || evt.raw_features?.payload?.risk_score || current.latest_risk;
         current.latest_decision = evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision || current.latest_decision;
         current.last_seen = evt.timestamp_epoch || current.last_seen;
+
+        // Aggregating Bot Detection properties
+        current.bot_detected = current.bot_detected || evt.bot_detected || evt.raw_features?.bot_detected;
+        if (evt.bot_reason || evt.raw_features?.bot_reason) {
+            current.bot_reason = evt.bot_reason || evt.raw_features?.bot_reason;
+        }
         
         const decision = evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision;
-        if (decision === 'TERMINATED' || decision === 'TERMINATE' || terminationStatus[key] === 'terminated') {
+        if (decision === 'TERMINATED' || decision === 'TERMINATE' || terminationStatus[key] === 'terminated' || current.bot_detected) {
             current.is_terminated = true;
             current.latest_decision = 'TERMINATED';
-            current.latest_risk = 0; // Reset risk to 0 on logout/termination so it doesn't show 100% red indefinitely 
+            current.latest_risk = evt.risk_score || evt.raw_features?.risk_score || current.latest_risk; // Keep the high risk score for bots
         } else if (evt.event_type === 'auth' || evt.event_type === 'AUTH_LOGIN' || evt.raw_features?.event_type === 'AUTH_LOGIN') {
             // ONLY explicitly revive on a fresh login to prevent delayed ghost-pings from reviving dead sessions
             if (terminationStatus[key] !== 'terminated') {
@@ -158,9 +164,12 @@ const Evaluate = () => {
                 }
             }
         }
+        let histAction = evt.raw_features?.path || evt.raw_features?.endpoint || evt.raw_features?.payload?.route || evt.route || 'ACTION';
+        if (evt.event_type === 'FORM_SUBMIT') histAction = 'Secure Data Entry';
+        
         current.history.push({
             type: evt.event_type || 'UNK',
-            action: evt.raw_features?.path || evt.raw_features?.endpoint || evt.raw_features?.payload?.route || evt.route || 'ACTION',
+            action: histAction,
             attack: evt.raw_features?.attack_signature,
             risk: evt.risk_score || evt.raw_features?.risk_score || 0,
             time: evt.timestamp_epoch || (Date.now() / 1000),
@@ -332,8 +341,13 @@ const Evaluate = () => {
                                 <span className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded ${user.latest_decision === 'ALLOW' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : user.latest_decision === 'RESTRICT' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
                                    {user.latest_decision}
                                 </span>
-                             </div>
-                          </td>
+                                 {user.bot_detected && (
+                                     <span className="text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded bg-red-900/30 text-red-400 border border-red-500/50 flex items-center gap-1">
+                                        <ShieldAlert className="w-3 h-3" /> BOT ACTIVITY DETECTED
+                                     </span>
+                                 )}
+                              </div>
+                           </td>
                           <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                              {user.is_terminated || terminationStatus[user.id] === 'terminated' ? (
                                 <span className="px-4 py-2 bg-red-900/20 text-red-500 border border-red-500/20 rounded font-bold text-xs inline-flex items-center gap-2">
@@ -417,6 +431,22 @@ const Evaluate = () => {
                                       </div>
                                    ))}
                                    </div>
+                                   
+                                   {/* Bot Detection Detailed View */}
+                                   {user.bot_detected && (
+                                       <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-xl space-y-2 relative overflow-hidden shadow-inner flex-shrink-0">
+                                           <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl -mt-10 -mr-10" />
+                                           <div className="flex items-center gap-2 text-danger font-black text-xs uppercase tracking-widest mb-3">
+                                               <ShieldAlert className="w-4 h-4" /> Bot Detection Engine Triggered
+                                           </div>
+                                           <div className="text-[11px] font-mono text-red-200/80 whitespace-pre-wrap leading-relaxed pl-2 border-l border-red-500/30">
+                                               {user.bot_reason || "Behavioral heuristics matched known bot trajectories."}
+                                           </div>
+                                           <div className="mt-4 inline-flex px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-[10px] font-bold text-red-400 uppercase tracking-widest rounded shadow-sm">
+                                               Action Taken: Session Terminated | Password Reset Required (Manual)
+                                           </div>
+                                       </div>
+                                   )}
                                 </div>
                              </td>
                           </tr>

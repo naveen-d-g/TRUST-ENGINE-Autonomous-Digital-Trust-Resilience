@@ -71,11 +71,19 @@ class InferenceService:
              
 
 
+        bot_detected = features.get("bot_detected", False)
+        bot_reason = features.get("bot_reason", "")
+        
         # Force Recommendation if provided (Independent of risk override)
         force_rec = request_data.get("force_recommendation")
         if force_rec:
              # Ensure it overrides any default "No specific recovery action"
              result.explanation["recovery_advice"] = [{"action": force_rec, "priority": "CRITICAL"}]
+             
+        if bot_detected:
+             result.decision = "TERMINATE"
+             result.explanation["primary_cause"] = "BOT ACTIVITY DETECTED"
+             result.explanation["recovery_advice"] = [{"action": "Force Logout + Manual Password Reset Required", "priority": "CRITICAL"}]
         
         # 2. Update In-Memory Risk History (CRITICAL for Velocity)
         SessionStateEngine.update_risk_history(session_id, result.risk_score)
@@ -108,6 +116,9 @@ class InferenceService:
                 existing_session.recommended_action = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor"
                 existing_session.session_duration_sec = int(features.get("session_duration_sec", 0))
                 existing_session.risk_reasons = risk_reasons_json
+                if bot_detected:
+                    existing_session.bot_detected = True
+                    existing_session.bot_reason = bot_reason
                 # Don't overwrite created_at or user_id (unless we want to update user binding)
                 if user_id: existing_session.user_id = user_id
             else:
@@ -121,9 +132,28 @@ class InferenceService:
                     recommended_action=result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor",
                     ip_address=features.get("ip_address", "0.0.0.0"),
                     session_duration_sec=int(features.get("session_duration_sec", 0)),
-                    risk_reasons=risk_reasons_json
+                    risk_reasons=risk_reasons_json,
+                    bot_detected=bot_detected,
+                    bot_reason=bot_reason
                 )
                 db.session.add(new_session)
+
+            # Terminate and force password reset if bot detected
+            if bot_detected and user_id:
+                from backend.db.models import User
+                user_record = User.query.filter_by(username=user_id).first()
+                if not user_record:
+                    # User table might not be seeded with simulated users, so lazily create/update
+                    user_record = User.query.filter_by(user_id=user_id).first()
+                if user_record:
+                    user_record.password_reset_required = True
+                
+                # Also notify the target app immediately
+                try:
+                    import requests
+                    requests.post("http://localhost:3001/api/terminate", json={"session_id": session_id}, timeout=2.0)
+                except Exception as ex:
+                    print(f"Failed to call target app terminate webhook: {ex}")
 
             
             # Create Metrics (Always append new metrics for history)
@@ -171,5 +201,9 @@ class InferenceService:
         formatted_result["final_decision"] = result.decision
         formatted_result["primary_cause"] = result.explanation.get("primary_cause", "Unknown")
         formatted_result["recommended_action"] = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor"
+        
+        if bot_detected:
+            formatted_result["bot_detected"] = True
+            formatted_result["bot_reason"] = bot_reason
         
         return formatted_result

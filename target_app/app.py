@@ -28,6 +28,8 @@ def send_event(domain: str, event_type: str, session_id: str, actor_id: str, pay
     payload["route"] = request.path if request else "/"
     payload["method"] = request.method if request else "GET"
     payload["correlation_id"] = correlation_id
+    if request:
+        payload["user_agent"] = request.headers.get("User-Agent", "")
 
     tenant_id = "default"
     
@@ -68,10 +70,26 @@ def check_termination():
             return redirect(url_for("force_password_reset"))
 
 # ROUTES
-@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    import time
     if request.method == "POST":
         username = request.form.get("username")
+        
+        # Calculate real duration
+        loaded_time_str = request.form.get("loaded_time")
+        current_time_ms = int(time.time() * 1000)
+        try:
+            if loaded_time_str:
+                login_duration_ms = current_time_ms - int(loaded_time_str)
+            else:
+                login_duration_ms = 120
+        except ValueError:
+            login_duration_ms = 120
+            
+        if login_duration_ms < 0:
+            login_duration_ms = 120
+            
         # generate a new session id
         sess_id = str(uuid.uuid4())
         session["session_id"] = sess_id
@@ -80,24 +98,24 @@ def login():
         
         send_event("WEB", "AUTH_LOGIN", sess_id, username, {
             "status_code": 200,
-            "metrics": {"login_duration_ms": 120},
+            "metrics": {"login_duration_ms": login_duration_ms},
             "attack_signature": None
         })
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("home"))
         
     # GET request
-    html = """
+    html = f"""
     <html>
     <head><title>Target App Login</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;}
-        .card { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 340px;}
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
-        .captcha-box { background: #f9fafb; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 6px; margin: 15px 0; display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #475569; }
-        .checkbox { width: 20px; height: 20px; margin: 0; cursor: pointer; }
-        button { background: #0f172a; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:hover { background: #1e293b; }
-        h2 { margin-top: 0; color: #0f172a; }
+        body {{ font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;}}
+        .card {{ background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 340px;}}
+        input, button {{ width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }}
+        .captcha-box {{ background: #f9fafb; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 6px; margin: 15px 0; display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #475569; }}
+        .checkbox {{ width: 20px; height: 20px; margin: 0; cursor: pointer; }}
+        button {{ background: #0f172a; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }}
+        button:hover {{ background: #1e293b; }}
+        h2 {{ margin-top: 0; color: #0f172a; }}
     </style>
     </head>
     <body>
@@ -105,6 +123,7 @@ def login():
         <h2>Target Application</h2>
         <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Login to simulated environment</p>
         <form method="POST">
+            <input type="hidden" name="loaded_time" value="{int(time.time() * 1000)}">
             <input type="text" name="username" value="demo_user" placeholder="Username" required><br>
             <input type="password" name="password" value="password" placeholder="Password" required><br>
             <div class="captcha-box">
@@ -177,6 +196,106 @@ def force_password_reset():
     """
     return render_template_string(html)
 
+@app.route("/")
+def index():
+    sess_id = session.get("session_id")
+    if sess_id and ACTIVE_SESSIONS.get(sess_id) == "ACTIVE":
+        return redirect(url_for("home"))
+    return redirect(url_for("login"))
+
+@app.route("/home", methods=["GET", "POST"])
+def home():
+    sess_id = session.get("session_id")
+    actor_id = session.get("actor_id")
+    if not sess_id or ACTIVE_SESSIONS.get(sess_id) == "TERMINATED":
+        return redirect(url_for("login"))
+        
+    send_event("WEB", "API_CALL", sess_id, actor_id, {
+        "status_code": 200,
+        "metrics": {"render_ms": 45}
+    })
+    
+    if request.method == "POST":
+        # Handle the new dummy form submission on the dashboard
+        data_field = request.form.get("data_field", "")
+        
+        send_event("WEB", "FORM_SUBMIT", sess_id, actor_id, {
+            "status_code": 200,
+            "metrics": {"submission_time_ms": 50},
+            "form_data": data_field,
+            "route": "/home"
+        })
+        
+    html = f"""
+    <html>
+    <head><title>Home</title>
+    <style>
+        body {{ font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }}
+        .navbar {{ background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
+        .nav-links a {{ color: #cbd5e1; text-decoration: none; margin-right: 20px; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }}
+        .nav-links a:hover, .nav-links a.active {{ background: #1e293b; color: white; }}
+        .logout-btn {{ color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; }}
+        .logout-btn:hover {{ background: rgba(239, 68, 68, 0.1); }}
+        
+        .content {{ padding: 2rem; max-width: 1000px; margin: 0 auto; }}
+        .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }}
+        
+        button.submit {{ background: #38bdf8; color: #0f172a; border: none; font-weight: bold; padding: 12px 20px; border-radius: 4px; margin-top: 15px; cursor: pointer; transition: all 0.2s; }}
+        button.submit:hover {{ background: #0ea5e9; }}
+        
+        .form-section {{ margin-top: 10px; padding: 20px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; }}
+        input[type="text"] {{ width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }}
+        .badge {{ background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }}
+    </style>
+    </head>
+    <body>
+    
+    <div class="navbar">
+        <div style="font-weight: bold; font-size: 18px;">Acme Corp <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
+        <div class="nav-links">
+            <a href="/home" class="active">Home</a>
+            <a href="/dashboard">Dashboard</a>
+        </div>
+        <div>
+            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{actor_id}</strong></span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+               <h2 style="margin:0;">Welcome Home, {actor_id}</h2>
+               <span class="badge">Session Active</span>
+            </div>
+            <p style="color:#64748b; margin-top:10px;">Please enter your daily payload metrics below for processing.</p>
+            
+            <div class="form-section">
+                <p style="margin-top:0;"><strong>Secure Data Entry</strong></p>
+                <form method="POST" action="/home">
+                    <label style="font-size:14px; color:#475569; font-weight:600;">Sensitive Data Field</label>
+                    <input type="text" name="data_field" placeholder="Enter sensitive alphanumeric data payload..." required />
+                    <button type="submit" class="submit">Save Data to Systems</button>
+                    <p style="font-size:12px; color:#94a3b8; margin-top:10px; margin-bottom:0;">Submitting this form immediately fires an event to the Trust Engine.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    setInterval(() => {{
+        fetch('/api/keepalive').catch(e=>console.error(e));
+        // Also check if we got kicked out by checking a simple endpoint
+        fetch('/api/ping').then(r=>{{
+            if(r.status === 403) window.location.reload();
+        }});
+    }}, 1000);
+    </script>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
 @app.route("/dashboard")
 def dashboard():
     sess_id = session.get("session_id")
@@ -193,33 +312,59 @@ def dashboard():
     <html>
     <head><title>Dashboard</title>
     <style>
-        body {{ font-family: sans-serif; background: #f0f2f5; padding: 2rem; }}
+        body {{ font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }}
+        .navbar {{ background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
+        .nav-links a {{ color: #cbd5e1; text-decoration: none; margin-right: 20px; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }}
+        .nav-links a:hover, .nav-links a.active {{ background: #1e293b; color: white; }}
+        .logout-btn {{ color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; }}
+        .logout-btn:hover {{ background: rgba(239, 68, 68, 0.1); }}
+        
+        .content {{ padding: 2rem; max-width: 1000px; margin: 0 auto; }}
         .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }}
-        button {{ padding: 10px 15px; margin-right: 10px; cursor: pointer; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px;}}
+        button {{ padding: 10px 15px; margin-right: 10px; cursor: pointer; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; font-weight:bold;}}
         button.danger {{ background: #ff4d4f; color: white; border: none; }}
-        #log {{ background: #222; color: #0f0; padding: 10px; font-family: monospace; height: 150px; overflow-y: scroll; border-radius: 4px; margin-top: 1rem;}}
+        #log {{ background: #222; color: #0f0; padding: 15px; font-family: monospace; height: 200px; overflow-y: scroll; border-radius: 6px; margin-top: 1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);}}
     </style>
     </head>
     <body>
-    <div class="card">
-        <h2>Dashboard</h2>
-        <p>Logged in as: <strong>{actor_id}</strong> (Session: <code>{sess_id}</code>)</p>
-        <button onclick="triggerAPI()">Trigger API Call</button>
-        <button onclick="triggerAttack()" class="danger">Simulate Attack</button>
-        <a href="/logout" style="margin-left: 20px; color: #ff4d4f;">Logout</a>
-        <div id="log">Event Log...<br></div>
+    <div class="navbar">
+        <div style="font-weight: bold; font-size: 18px;">Acme Corp <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
+        <div class="nav-links">
+            <a href="/home">Home</a>
+            <a href="/dashboard" class="active">Dashboard</a>
+        </div>
+        <div>
+            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{actor_id}</strong></span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="card">
+            <h2>System Diagnostics Dashboard</h2>
+            <p style="color:#64748b; margin-bottom:20px;">Use the controls below to verify backend telemetry and simulate security triggers. (Session ID: <code>{sess_id}</code>)</p>
+            <div style="margin-bottom:20px;">
+                <button onclick="triggerAPI()">Trigger API Call</button>
+                <button onclick="triggerAttack()" class="danger">Simulate Attack</button>
+            </div>
+            
+            <div id="log">Event Log initialized...<br></div>
+        </div>
     </div>
     <script>
     function logMsg(msg) {{
         const log = document.getElementById('log');
-        log.innerHTML += '> ' + msg + '<br>';
+        const now = new Date().toLocaleTimeString();
+        log.innerHTML += '[' + now + '] > ' + msg + '<br>';
         log.scrollTop = log.scrollHeight;
     }}
     function triggerAPI() {{
-        fetch('/api/data').then(r=>r.json()).then(d=>logMsg('API Call Success: ' + JSON.stringify(d))).catch(e=>logMsg('API Error: ' + e));
+        logMsg('Initiating generic API call...');
+        fetch('/api/data').then(r=>r.json()).then(d=>logMsg('<span style="color:#818cf8">API Error Success: ' + JSON.stringify(d) + '</span>')).catch(e=>logMsg('<span style="color:#f87171">API Error: ' + e + '</span>'));
     }}
     function triggerAttack() {{
-        fetch('/simulate_attack').then(r=>r.json()).then(d=>logMsg('Attack Simulated: ' + JSON.stringify(d))).catch(e=>logMsg('Attack Error: ' + e));
+        logMsg('<span style="color:#fbbf24">Simulating malicious attack vector...</span>');
+        fetch('/simulate_attack').then(r=>r.json()).then(d=>logMsg('<span style="color:#4ade80">Attack Telemetry Sent: ' + JSON.stringify(d) + '</span>')).catch(e=>logMsg('<span style="color:#f87171">Attack Simulation Error: ' + e + '</span>'));
     }}
     setInterval(() => {{
         fetch('/api/keepalive').catch(e=>console.error(e));
