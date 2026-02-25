@@ -27,3 +27,6 @@ shap
 gunicorn
 flask-limiter
 requests
+selenium
+webdriver-manager
+confluent-kafka
