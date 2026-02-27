@@ -21,8 +21,19 @@ def get_summary():
         dist_query = db.session.query(Session.final_decision, func.count(Session.final_decision)).group_by(Session.final_decision).all()
         dist = {res[0]: res[1] for res in dist_query}
         
-        # Get average trust score
-        avg_trust = db.session.query(func.avg(Session.trust_score)).scalar() or 0
+        # Get average trust score (15-minute sliding window)
+        # We include TERMINATED sessions in this sliding window to reflect the impact of recent attacks
+        recent_window = datetime.utcnow() - timedelta(minutes=15)
+        avg_trust_val = db.session.query(func.avg(Session.trust_score))\
+            .filter(Session.created_at >= recent_window)\
+            .filter(Session.primary_cause != 'Terminated (System Reset)').scalar()
+            
+        if avg_trust_val is None:
+            # Fallback to all non-terminated sessions if no recent activity
+            avg_trust_val = db.session.query(func.avg(Session.trust_score))\
+                .filter(Session.final_decision != 'TERMINATED').scalar()
+        
+        avg_trust = float(avg_trust_val) if avg_trust_val is not None else 100.0
         
         # Get top causes
         top_causes_query = db.session.query(Session.primary_cause, func.count(Session.primary_cause)).group_by(Session.primary_cause).order_by(func.count(Session.primary_cause).desc()).limit(5).all()
@@ -57,12 +68,14 @@ def get_summary():
             "infra": float(domain_risk_res[3] or 0) * 100
         }
 
-        # Risk Score Trend (Proxy for Velocity History)
+        # Risk Score Trend (Proxy for Velocity History), excluding TERMINATED
         risk_trend_query = db.session.query(
             func.to_char(Session.created_at, 'HH24:00').label('hour'),
             func.avg(SessionMetric.risk_score).label('avg_risk')
         ).join(SessionMetric, Session.session_id == SessionMetric.session_id)\
-         .filter(Session.created_at >= last_24h).group_by('hour').order_by('hour').all()
+         .filter(Session.created_at >= last_24h)\
+         .filter(Session.final_decision != 'TERMINATED')\
+         .group_by('hour').order_by('hour').all()
          
         risk_history = [{"time": res[0], "value": float(res[1])} for res in risk_trend_query]
         

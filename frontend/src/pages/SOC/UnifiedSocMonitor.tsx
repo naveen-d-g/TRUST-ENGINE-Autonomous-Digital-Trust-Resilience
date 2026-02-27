@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useLiveContext } from "../../context/LiveContext";
 import { useLiveStats } from "../../hooks/useLiveStats";
+import { socApi } from "../../api/soc.api";
 import { 
   AreaChart, 
   Area, 
@@ -29,6 +30,10 @@ const UnifiedSocMonitor = () => {
     const { data: stats } = useLiveStats();
     const [graphData, setGraphData] = useState<any[]>([]);
     const [showSafetyMeasures, setShowSafetyMeasures] = useState(false);
+    const prevTrustRef = useRef(100);
+
+    const [isResetting, setIsResetting] = useState(false);
+    const [isRecovered, setIsRecovered] = useState(false);
 
     // Accumulate graph data from stats/events
     useEffect(() => {
@@ -44,11 +49,34 @@ const UnifiedSocMonitor = () => {
 
         setGraphData(prev => [...prev, newPoint].slice(-30)); // Keep last 30 points
 
-        // Trigger safety measures if trust drops significantly
-        if (trustVal < 50 && !showSafetyMeasures) {
+        const activeIncidents = stats.metrics?.active_incidents || 0;
+
+        // Trigger safety measures if trust drops significantly OR if incidents are active
+        if ((trustVal < 50 && prevTrustRef.current >= 50) || (activeIncidents > 0)) {
             setShowSafetyMeasures(true);
         }
-    }, [stats, showSafetyMeasures]);
+        prevTrustRef.current = trustVal;
+    }, [stats]);
+
+    const handleEnforceReset = async () => {
+        setIsResetting(true);
+        try {
+            await socApi.enforceReset();
+            setIsRecovered(true);
+            
+            // Show success message for 3 seconds before closing
+            setTimeout(() => {
+                setShowSafetyMeasures(false);
+                setIsRecovered(false);
+            }, 3000);
+            
+        } catch (err) {
+            console.error("Failed to reset session:", err);
+            // Optional: add an error toast here
+        } finally {
+            setIsResetting(false);
+        }
+    };
 
     const getRiskColor = (event: any) => {
         const severity = event.severity || (event.risk_score > 70 ? 'critical' : event.risk_score > 40 ? 'medium' : 'low');
@@ -182,6 +210,14 @@ const UnifiedSocMonitor = () => {
                         </span></span>
                         <span>Protocol: <span className="text-blue-400">gRPC/SSE</span></span>
                         <div className="flex items-center gap-2 border-l border-gray-800 pl-4 ml-2">
+                            <button 
+                                onClick={handleEnforceReset}
+                                disabled={isResetting}
+                                className={`px-3 py-1 ${isResetting ? 'bg-red-800' : 'bg-red-500/10 hover:bg-red-500/20'} text-red-500 rounded transition-colors flex items-center gap-2 mr-2`}
+                            >
+                                <LifeBuoy className={`w-3 h-3 ${isResetting ? 'animate-spin' : ''}`} />
+                                {isResetting ? 'RESOLVING...' : 'RESOLVE ALL'}
+                            </button>
                              <button 
                                 onClick={() => window.location.reload()}
                                 className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded transition-colors"
@@ -296,25 +332,43 @@ const UnifiedSocMonitor = () => {
                     <div className="absolute top-0 right-0 p-2">
                         <button onClick={() => setShowSafetyMeasures(false)} className="text-gray-500 hover:text-white">✕</button>
                     </div>
-                    <div className="flex gap-4 items-start mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
-                            <LifeBuoy className="w-6 h-6 text-red-500 animate-spin-slow" />
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-black text-white uppercase tracking-tight">Safety Intervention</h3>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed mt-1">
-                                Critical risk threshold breached. Recommended actions:
+                    {isRecovered ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center animate-in zoom-in duration-300">
+                            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
+                                <CheckCircle className="w-8 h-8 text-emerald-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight mb-2">Recovery Process Done</h3>
+                            <p className="text-xs text-emerald-400 font-bold tracking-wide">
+                                Terminated active attack scripts. System returned to normal state.
                             </p>
                         </div>
-                    </div>
-                    <div className="space-y-3">
-                        <button className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                            Enforce Immediate Session Reset
-                        </button>
-                        <button className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                            Enable Adaptive 2FA
-                        </button>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="flex gap-4 items-start mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                                    <LifeBuoy className="w-6 h-6 text-red-500 animate-spin-slow" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Safety Intervention</h3>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed mt-1">
+                                        Critical risk threshold breached. Recommended actions:
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleEnforceReset}
+                                    disabled={isResetting}
+                                    className={`w-full py-3 ${isResetting ? 'bg-red-800 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} rounded-xl text-[10px] font-black uppercase tracking-widest transition-all`}
+                                >
+                                    {isResetting ? 'ENFORCING...' : 'Enforce Immediate Session Reset'}
+                                </button>
+                                <button className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                    Enable Adaptive 2FA
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

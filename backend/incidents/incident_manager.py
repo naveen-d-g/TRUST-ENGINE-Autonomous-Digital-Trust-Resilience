@@ -42,3 +42,20 @@ class IncidentManager:
         transition_status(incident, new_status)
         db.session.commit()
         return True
+
+    _ACTIVE_GROUPS = {}
+
+    @staticmethod
+    def link_proposal_to_incident(proposal: dict) -> str:
+        import uuid
+        incident_id = str(uuid.uuid4())
+        session_id = proposal.get("session_id")
+        user_id = proposal.get("user_id")
+
+        if session_id:
+             IncidentManager._ACTIVE_GROUPS[session_id] = incident_id
+        if user_id:
+             IncidentManager._ACTIVE_GROUPS[user_id] = incident_id
+
+        return incident_id
+

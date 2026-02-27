@@ -56,57 +56,62 @@ STORIES = {
 }
 
 def run_story(domain, endpoint_suffix):
-    session_id = f"{domain}_SIM_{uuid.uuid4().hex[:6].upper()}"
-    story_idx = 0
-    story = STORIES[domain]
-    
-    # Create a robust session for this thread
-    http = get_session()
-    
-    print(f"[{domain}] Starting Simulation Story on Session {session_id}")
-    
-    while True:
-        # Loop through the story pattern
-        delay, risk, label, rec = story[story_idx]
+    for run_num in range(1, 3):
+        story = STORIES[domain]
+        http = get_session()
         
-        try:
-            payload = {
-                "session_id": session_id,
-                "risk_score": risk,
-                "details": label,
-                "timestamp": time.time()
-            }
+        session_id = f"{domain}_SIM_{uuid.uuid4().hex[:6].upper()}"
+        story_idx = 0
+        
+        print(f"[{domain}] [Run {run_num}/2] Starting Simulation Story on Session {session_id}")
+        
+        while story_idx < len(story):
+            # Loop through the story pattern
+            delay, risk, label, rec = story[story_idx]
             
-            # Add Domain Specifics
-            if domain == "WEB":
-                payload.update({"method": "POST", "path": "/login", "ip": "192.168.1.50", "status_code": 403 if risk > 80 else 200})
-            elif domain == "API":
-                payload.update({"endpoint": "/v1/admin/users", "token_id": "captured_token", "usage_count": 999})
-            elif domain == "NETWORK":
-                payload.update({"source_ip": "10.0.0.66", "procotol": "UDP", "dest_port": 53})
-            elif domain == "SYSTEM":
-                payload.update({"hostname": "db-prod-01", "cpu_load": 99.9 if risk > 90 else 25.0, "process": "unknown_miner"})
+            try:
+                payload = {
+                    "session_id": session_id,
+                    "risk_score": risk,
+                    "details": label,
+                    "timestamp": time.time()
+                }
+                
+                # Add Domain Specifics
+                if domain == "WEB":
+                    payload.update({"method": "POST", "path": "/login", "ip": "192.168.1.50", "status_code": 403 if risk > 80 else 200})
+                elif domain == "API":
+                    payload.update({"endpoint": "/v1/admin/users", "token_id": "captured_token", "usage_count": 999})
+                elif domain == "NETWORK":
+                    payload.update({"source_ip": "10.0.0.66", "procotol": "UDP", "dest_port": 53})
+                elif domain == "SYSTEM":
+                    payload.update({"hostname": "db-prod-01", "cpu_load": 99.9 if risk > 90 else 25.0, "process": "unknown_miner"})
 
-            # Inject Recommendation if critical
-            if rec:
-                payload["recommendation"] = rec
+                # Inject Recommendation if critical
+                if rec:
+                    payload["recommendation"] = rec
 
-            url = f"{BASE_URL}/{endpoint_suffix}"
-            http.post(url, json=payload, headers=HEADERS)
-            # print(f"[{domain}] Sent Risk {risk}: {label}")
+                url = f"{BASE_URL}/{endpoint_suffix}"
+                http.post(url, json=payload, headers=HEADERS)
+                # print(f"[{domain}] Sent Risk {risk}: {label}")
+                
+            except Exception as e:
+                print(f"[{domain}] Error: {e}")
+                
+            time.sleep(delay)
             
-        except Exception as e:
-            print(f"[{domain}] Error: {e}")
+            # Simulated Enforcement: Terminate the attack if Critical Priority
+            if risk >= 90:
+                print(f"[{domain}] [CRITICAL] RISK ({risk}): Platform Enforcement Triggered. Terminating Session {session_id}.")
+                time.sleep(2.0) # Pause to let UI update
+                break # Break inner loop, generating a new session
             
-        time.sleep(delay)
-        
-        # Advance story
-        story_idx = (story_idx + 1) % len(story)
-        
-        # Reset session ID occasionally to simulate new attacks
-        if story_idx == 0:
-            session_id = f"{domain}_SIM_{uuid.uuid4().hex[:6].upper()}"
-            time.sleep(1.0) # Gap between stories
+            # Advance story
+            story_idx += 1
+
+        print(f"[{domain}] [Run {run_num}/2] Simulation finished for Session {session_id}")
+        if run_num < 2:
+            time.sleep(2) # Brief pause between runs
 
 if __name__ == "__main__":
     print("--- Starting Combined Attack Strategy Simulation ---")
@@ -129,7 +134,8 @@ if __name__ == "__main__":
         threads.append(t)
         
     try:
-        while True:
-            time.sleep(1)
+        for t in threads:
+            t.join()
+        print("\nAll simulations completed.")
     except KeyboardInterrupt:
-        print("\nStopping simulation...")
+        print("\nStopping simulation early...")

@@ -32,8 +32,8 @@ class InferenceService:
         if force_risk is not None:
              result.risk_score = float(force_risk)
              # Infer decision from forced score
-             if result.risk_score >= 80: result.decision = "ESCALATE"
-             elif result.risk_score >= 50: result.decision = "RESTRICT"
+             if result.risk_score >= 90: result.decision = "TERMINATED"
+             elif result.risk_score >= 50: result.decision = "ESCALATE"
              else: result.decision = "ALLOW"
              
              # Add to explanation

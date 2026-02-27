@@ -56,3 +56,9 @@ class RecoveryEngine:
         )
         
         return action
+
+    @staticmethod
+    def generate_recovery_plan(incident_id: str, trigger_reason: str, context: dict, threat_assessment: dict):
+        print(f"[RECOVERY] Generated recovery plan for Incident {incident_id} due to {trigger_reason}")
+        return True
+

@@ -62,7 +62,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       if (currentFilters.severity) params.append('severity', currentFilters.severity);
       if (currentFilters.search) params.append('search', currentFilters.search);
 
-      const dtos = await api.get<SessionDTO[]>(`/api/v1/sessions?${params.toString()}`);
+      const queryString = params.toString();
+      const url = queryString ? `/api/v1/sessions/?${queryString}` : '/api/v1/sessions/';
+
+      const response = await api.get<any>(url);
+      const dtos = response.status === 'success' && response.data ? response.data : response;
       const sessions = mapSessionDtoArray(dtos);
 
       set({
@@ -88,7 +92,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     logger.debug('Fetching session by ID', { id });
 
     try {
-      const dto = await api.get<SessionDTO>(`/api/v1/sessions/${id}`);
+      const response = await api.get<any>(`/api/v1/sessions/${id}`);
+      const dto = response.status === 'success' && response.data ? response.data : response;
       const session = mapSessionDto(dto);
 
       set({

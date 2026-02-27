@@ -1,14 +1,14 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from backend.utils.rbac import admin_required
-from backend.database.models import User
-from backend.database.db import db
-from backend.utils.logger import log_error
+from backend.auth.rbac import require_role
+from backend.models.user import User
+from backend.extensions import db
+import logging
 
 user_bp = Blueprint('user', __name__)
 
 @user_bp.route("/create", methods=["POST"])
-@admin_required
+@require_role('ADMIN')
 def create_user():
     try:
         data = request.get_json()
@@ -40,21 +40,21 @@ def create_user():
         return jsonify(message="User created successfully", user=new_user.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        log_error("User Creation Failure", error=e)
+        logging.error(f"User Creation Failure: {e}")
         return jsonify(error="Internal Server Error", message=str(e)), 500
 
 @user_bp.route("/list", methods=["GET"])
-@admin_required
+@require_role('ADMIN')
 def list_users():
     try:
         users = User.query.all()
         return jsonify([user.to_dict() for user in users]), 200
     except Exception as e:
-        log_error("User List Failure", error=e)
+        logging.error(f"User List Failure: {e}")
         return jsonify(error="Internal Server Error", message=str(e)), 500
 
 @user_bp.route("/delete/<user_id>", methods=["DELETE"])
-@admin_required
+@require_role('ADMIN')
 def delete_user(user_id):
     try:
         user = db.session.get(User, user_id)
@@ -72,11 +72,11 @@ def delete_user(user_id):
         return jsonify(message="User deleted successfully"), 200
     except Exception as e:
         db.session.rollback()
-        log_error("User Deletion Failure", error=e)
+        logging.error(f"User Deletion Failure: {e}")
         return jsonify(error="Internal Server Error", message=str(e)), 500
 
 @user_bp.route("/update/<user_id>", methods=["PUT"])
-@admin_required
+@require_role('ADMIN')
 def update_user(user_id):
     try:
         user = db.session.get(User, user_id)
@@ -106,5 +106,5 @@ def update_user(user_id):
         return jsonify(message="User updated successfully", user=user.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        log_error("User Update Failure", error=e)
+        logging.error(f"User Update Failure: {e}")
         return jsonify(error="Internal Server Error", message=str(e)), 500

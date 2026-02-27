@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from backend.db.models import Incident
 from backend.audit.models import AuditLog
 from backend.auth.decorators import require_access
@@ -6,8 +6,9 @@ from backend.contracts.enums import Role
 from backend.incidents.enums import IncidentStatus, IncidentSeverity
 from backend.incidents.incident_manager import IncidentManager
 from backend.audit.service import AuditService
+from backend.services.observation_service import SessionStateEngine
 
-bp = Blueprint("soc", __name__, url_prefix="/api/soc")
+bp = Blueprint("soc", __name__)
 
 @bp.route("/incidents", methods=["GET"])
 @require_access(role=Role.ANALYST) # Note: simplify to single role for now or update decorator
@@ -114,8 +115,7 @@ def terminate_session(session_id):
         actor_id="SOC_ANALYST",
         role="ANALYST",
         platform="SECURITY_PLATFORM",
-        action="SESSION_TERMINATED",
-        details={"session_id": session_id}
+        action="SESSION_TERMINATED"
     )
     return jsonify({"status": "Session terminated", "session_id": session_id}), 200
 
@@ -125,3 +125,71 @@ def get_session_logs(session_id):
     from backend.db.models import Event
     events = Event.query.filter_by(session_id=session_id).order_by(Event.timestamp.asc()).all()
     return jsonify([e.to_dict() for e in events]), 200
+
+@bp.route("/reset_simulation", methods=["POST"])
+@require_access(role=Role.ADMIN)
+def reset_simulation():
+    """
+    Recovers the system from a simulated attack.
+    - Resolves OPEN incidents
+    - Terminates low-trust sessions
+    - Clears attacking sessions from tracking
+    """
+    from backend.db.models import Session, Incident, db
+    
+    # 1. Resolve active incidents
+    open_incidents = Incident.query.filter_by(status=IncidentStatus.OPEN).all()
+    for incident in open_incidents:
+        incident.status = IncidentStatus.RESOLVED
+        
+    # 2. Terminate all risk-bearing sessions (Trust < 80)
+    malicious_sessions = Session.query.filter(Session.trust_score < 80).all()
+    terminated_sids = []
+    for session in malicious_sessions:
+        session.final_decision = "TERMINATED"
+        session.primary_cause = "Terminated (System Reset)"
+        terminated_sids.append(session.session_id)
+            
+    db.session.commit()
+    
+    # 3. Clear from active tracking
+    to_remove = []
+    
+    # Force evaluation of all memory sessions to find attackers before they are saved to DB
+    for sid, state in SessionStateEngine._sessions.items():
+        if sid in terminated_sids:
+            to_remove.append(sid)
+            continue
+            
+        # Also clean up memory sessions with low provisional trust or specific attack indicators
+        risk_history = state.get("risk_history", [])
+        if risk_history and len(risk_history) > 0:
+            latest_risk = risk_history[-1][1]
+            if latest_risk > 50:
+                to_remove.append(sid)
+                continue
+                
+        # Proactively check event counts (e.g., scanners)
+        if state.get("total_requests", 0) > 20 and not risk_history:
+             # Fast brute force or scanner hasn't been scored yet, kill it just in case
+             to_remove.append(sid)
+                
+    for sid in to_remove:
+        if sid in SessionStateEngine._sessions:
+             del SessionStateEngine._sessions[sid]
+             
+    # 4. Clear global history to prevent graph artifacts
+    SessionStateEngine._global_history.clear()
+
+    AuditService.log(
+        actor_id=getattr(g, 'user_id', 'SOC_ADMIN'),
+        role="ADMIN",
+        platform="SECURITY_PLATFORM",
+        action="SYSTEM_RESET"
+    )
+    
+    return jsonify({
+        "status": "System Recovered",
+        "incidents_resolved": len(open_incidents),
+        "sessions_terminated": len(to_remove)
+    }), 200

@@ -42,7 +42,7 @@ class OrchestrationEngine:
             )
             
             # 2. Log Decision
-            AuditLogger.log_decision(context.to_dict(), "RECEIVED", "Processing ml result")
+            AuditLogger.log_system_event("RECEIVED", f"Processing ml result: {context.to_dict()}", "INFO")
             
             # 3. Route
             workflow = DecisionRouter.route_decision(context.decision)
@@ -50,15 +50,15 @@ class OrchestrationEngine:
             # 4. Handle Workflow
             if workflow == "MONITORING_ONLY":
                 # Just log, maybe update trust metric stats
-                AuditLogger.log_decision(context.to_dict(), "MONITORED", "No action needed")
+                AuditLogger.log_system_event("MONITORED", f"No action needed: {context.to_dict()}", "INFO")
                 
             elif workflow == "SOC_ALERT":
-                AuditLogger.log_decision(context.to_dict(), "ALERTED", "Sent to SOC Alert Stream")
+                AuditLogger.log_system_event("ALERTED", f"Sent to SOC Alert Stream: {context.to_dict()}", "WARNING")
                 
             elif workflow in ["ENFORCEMENT_PROPOSAL", "HIGH_PRIORITY_ENFORCEMENT"]:
                 # Check for Staleness before proposing
                 if context.is_expired():
-                    AuditLogger.log_decision(context.to_dict(), "REJECTED_STALE", "Context expired before orchestration")
+                    AuditLogger.log_system_event("REJECTED_STALE", f"Context expired before orchestration: {context.to_dict()}", "WARNING")
                     return
 
                 # Blast Radius Guard
@@ -84,7 +84,7 @@ class OrchestrationEngine:
                 from backend.enforcement.enforcement_engine import EnforcementEngine
                 EnforcementEngine.handle_enforcement_request(context)
                 
-                AuditLogger.log_decision(context.to_dict(), "PROPOSED", f"Enforcement Proposal Handed Off ({workflow})")
+                AuditLogger.log_system_event("PROPOSED", f"Enforcement Proposal Handed Off ({workflow}): {context.to_dict()}", "INFO")
                 
         except Exception as e:
             AuditLogger.log_system_event("ORCHESTRATION_ERROR", str(e), "ERROR")

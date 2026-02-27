@@ -37,27 +37,12 @@ def ensure_admin():
         db.session.add(admin)
         db.session.commit()
         print("[OK] Admin user 'dghere@admin' created")
-    
-    # Seed sess-attack for demonstration
-    if not Session.query.filter_by(session_id="sess-attack").first():
-        s_attack = Session(
-            session_id="sess-attack",
-            user_id="user-attack-sim",
-            trust_score=15.5,
-            final_decision="REJECT",
-            primary_cause="Simulation Attack",
-            ip_address="1.2.3.4"
-        )
-        db.session.add(s_attack)
-        from backend.models.session_metric import SessionMetric
-        m_attack = SessionMetric(
-            session_id="sess-attack",
-            attack_probability=0.92,
-            risk_score=84.5
-        )
-        db.session.add(m_attack)
+    else:
+        # Force overwrite the old scrypt hash with the new bcrypt format
+        admin.password_hash = hash_password("dghere")
         db.session.commit()
-        print("[OK] Seeded 'sess-attack' session")
+    
+    # No fake sessions seeded by default to keep dashboard clean.
 
 def create_app(config_class=Config):
     """
@@ -109,6 +94,7 @@ def create_app(config_class=Config):
     from backend.api.monitoring_routes import monitoring_bp
     from backend.api.enforcement_routes import enforcement_bp
     from backend.routes.trust_routes import trust_bp
+    from backend.routes.user_routes import user_bp
     
     app.register_blueprint(soc_bp, url_prefix="/api/v1/soc")
     app.register_blueprint(batch_bp, url_prefix="/api/v1/batch")
@@ -123,6 +109,7 @@ def create_app(config_class=Config):
     app.register_blueprint(monitoring_bp, url_prefix="/api/v1/monitoring")
     app.register_blueprint(enforcement_bp, url_prefix="/api/v1/enforcement")
     app.register_blueprint(trust_bp, url_prefix="/api/v1/trust")
+    app.register_blueprint(user_bp, url_prefix="/api/v1/users")
     
     # 💥 DOMAIN KAFKA CONSUMER
     try:

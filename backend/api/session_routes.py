@@ -132,35 +132,32 @@ def get_session_details(session_id):
         session = Session.query.filter_by(session_id=session_id).first()
         
         if session:
-            events = [
-                {
-                    "event_id": e.event_id,
+            data = session.to_dict()
+            
+            # Fetch events if they are related to a Batch Job 
+            from backend.db.models import BatchRawEvent
+            batch_events = BatchRawEvent.query.filter_by(session_id=session_id).all()
+            
+            events = []
+            for e in batch_events:
+                events.append({
+                    "event_id": e.id,
                     "type": e.event_type,
-                    "timestamp": e.timestamp.isoformat(),
-                    "domain": e.domain,
-                    "risk": 0.0 # TODO: Store risk per event or derive
-                } for e in session.events
-            ]
+                    "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                    "domain": "BATCH",
+                    "risk": data.get("risk_score", 0) 
+                })
             
-            signals = [
-                {
-                    "signal_id": s.signal_id,
-                    "type": s.signal_type,
-                    "severity": s.severity,
-                    "timestamp": s.timestamp.isoformat()
-                } for s in session.signals
-            ]
+            data["events"] = events
+            data["signals"] = []
+            data["event_count"] = len(events)
+            data["signal_count"] = 0
             
-            return success_response({
-                "session_id": session.session_id,
-                "user_id": session.user_id,
-                "risk_score": session.risk_score,
-                "start_time": session.start_time.isoformat(),
-                "event_count": len(events),
-                "signal_count": len(signals),
-                "events": events,
-                "signals": signals
-            })
+            # Make sure we explicitly have risk_score vs trust_score
+            if "risk_score" not in data and "trust_score" in data:
+                data["risk_score"] = 100.0 - data["trust_score"]
+                
+            return success_response(data)
 
         # 2. Try In-Memory State (Live/Simulated Sessions)
         from backend.services.observation_service import SessionStateEngine
@@ -188,7 +185,7 @@ def get_session_details(session_id):
                 "session_id": session_id,
                 "user_id": "simulated-user", # active session might not have user_id stored nicely in root
                 "risk_score": mem_session.get("current_risk_score", 0),
-                "start_time": mem_session.get("created_at"),
+                "created_at": mem_session.get("created_at"),
                 "event_count": len(events_data),
                 "signal_count": 0,
                 "events": events_data,

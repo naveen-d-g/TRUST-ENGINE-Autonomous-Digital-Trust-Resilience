@@ -41,12 +41,13 @@ class Session(db.Model):
     def to_dict(self):
         return {
             "session_id": self.session_id,
-            "user_id": self.user_id,
+            "user_id": self.user_id or "Anonymous",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
             "trust_score": self.trust_score,
             "risk_score": self.risk_score,
             "final_decision": self.final_decision,
+            "decision": self.final_decision,  # Alias for frontend consistency
             "primary_cause": self.primary_cause,
             "recommended_action": self.recommended_action,
             "ip_address": self.ip_address,

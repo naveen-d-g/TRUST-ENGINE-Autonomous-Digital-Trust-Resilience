@@ -1,0 +1,49 @@
+{
+  "average_trust_score": 95.0,
+  "bot_vs_attack_ratio": 0,
+  "decision_distribution": {
+    "ALLOW": 5,
+    "TERMINATED": 19
+  },
+  "domain_breakdown": {
+    "api": 0.0,
+    "infra": 0.0,
+    "network": 0.0,
+    "web": 0.0
+  },
+  "metrics": {
+    "active_incidents": 0,
+    "active_node": "US-EAST-ENTERPRISE-01",
+    "active_sessions": 24,
+    "allow_count": 5,
+    "escalate_count": 0,
+    "global_risk_score": 5.0,
+    "restrict_count": 0,
+    "risk_velocity": 0.1
+  },
+  "risk_history": [
+    {
+      "time": "05:00",
+      "value": 5.0
+    },
+    {
+      "time": "12:00",
+      "value": 5.0
+    }
+  ],
+  "top_risk_causes": [
+    "Terminated (System Reset)",
+    "Simulated Attack (Forced Risk)",
+    "Routine Activity"
+  ],
+  "trust_evolution": [
+    {
+      "time": "05:00",
+      "value": 21.73913043478261
+    },
+    {
+      "time": "12:00",
+      "value": 95.0
+    }
+  ]
+}

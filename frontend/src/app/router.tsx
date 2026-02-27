@@ -20,6 +20,8 @@ const IncidentDetails = lazy(() => import("@/pages/SOC/IncidentDetail"))
 const HomeV1 = lazy(() => import("@/pages/public/HomeV1"))
 // Trust Evaluation
 const Evaluate = lazy(() => import("@/pages/Evaluate.jsx"))
+// Users
+const UserManagement = lazy(() => import("@/pages/Users/UserManagementPage"))
 
 // Home Landing
 const WebSecurity = lazy(() => import("@/pages/Domain/WebSecurity"))
@@ -73,6 +75,7 @@ export const AppRouter = () => {
             
             <Route element={<RoleGuard allowed={["ADMIN"]} />}>
                <Route path="/simulation" element={<Simulation />} />
+               <Route path="/users" element={<UserManagement />} />
             </Route>
           </Route>
           

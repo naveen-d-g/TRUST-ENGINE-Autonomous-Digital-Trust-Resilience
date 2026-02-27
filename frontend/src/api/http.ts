@@ -9,6 +9,8 @@ export const http: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'X-API-Key': 'dev-api-key', // Hardcoded for dev/demo environment
     'X-Tenant-ID': 'tenant_1',  // Standardized for dev alignment
+    'X-Platform': 'SECURITY_PLATFORM',
+    'X-Role': 'ADMIN',
   },
   withCredentials: true, // Important for session cookies
 });

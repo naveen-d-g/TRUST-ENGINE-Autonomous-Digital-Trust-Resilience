@@ -103,3 +103,16 @@ class AuditLogger(AuditContract):
                 "new_state": new_state
             }
         })
+
+    @classmethod
+    def log_enforcement(cls, proposal_id: str, action_taken: str, status: str, reason: str):
+        logger = cls()
+        logger.append({
+            "action": "ENFORCEMENT_ACTION",
+            "details": {
+                "proposal_id": proposal_id,
+                "action_taken": action_taken,
+                "status": status,
+                "reason": reason
+            }
+        })

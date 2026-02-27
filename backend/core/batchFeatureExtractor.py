@@ -30,10 +30,24 @@ class BatchFeatureExtractor:
         bot_prob = (failed_logins * 2 + rapid_fire) / (total_events * 2) if total_events > 0 else 0
         
         # 2. Attack Signals
-        captcha_fail = sum(1 for e in events if e.get("event_type") == "CAPTCHA_FAIL")
-        waf_blocks = sum(1 for e in events if "WAF_BLOCK" in str(e.get("payload", "")))
+        # Check event types and payloads for common attack vectors
+        attack_keywords = ["CAPTCHA_FAIL", "WAF_BLOCK", "SQL", "XSS", "INJECTION", "EXPLOIT", "ATTACK", "BRUTE", "MALWARE"]
         
-        attack_signal = (captcha_fail * 3 + waf_blocks * 5) / (total_events * 5) if total_events > 0 else 0
+        attack_count = 0
+        for e in events:
+            e_type = str(e.get("event_type", "")).upper()
+            e_payload = str(e.get("payload", "")).upper()
+            e_user = str(e.get("user_id", "")).upper()
+            
+            # Direct keyword match in type or payload
+            if any(k in e_type for k in attack_keywords) or any(k in e_payload for k in attack_keywords):
+                attack_count += 1
+            
+            # Heuristic: If they are named 'attacker'
+            if "ATTACKER" in e_user:
+                attack_count += 5
+                
+        attack_signal = (attack_count * 5) / (total_events * 5) if total_events > 0 else 0
         
         # 3. Anomaly Scoring (Entropy / Unusual Pattern)
         distinct_ips = len(set(e.get("ip") for e in events if e.get("ip")))

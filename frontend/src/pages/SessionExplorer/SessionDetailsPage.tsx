@@ -60,9 +60,7 @@ const SessionDetailsPage = () => {
 
   const mlExplanation: MLExplanation | undefined = session ? {
     risk_score: session.riskScore || 0,
-    decision: (["TRUSTED", "SUSPICIOUS", "MALICIOUS"].includes(session.decision) 
-      ? session.decision 
-      : "SUSPICIOUS") as "TRUSTED" | "SUSPICIOUS" | "MALICIOUS",
+    decision: (session.decision === 'ALLOW' ? 'TRUSTED' : session.decision === 'ESCALATE' ? 'SUSPICIOUS' : session.decision === 'RESTRICT' ? 'MALICIOUS' : "SUSPICIOUS") as any,
     feature_importance: [
         { feature: "Geo Velocity", weight: session.riskScore > 50 ? 0.85 : 0.12 },
         { feature: "Device Fingerprint", weight: session.riskScore > 30 ? -0.12 : 0.45 },
@@ -83,21 +81,21 @@ const SessionDetailsPage = () => {
   // Mock Intelligence Data
   // Dynamic Intelligence Data
   const riskBreakdown = [
-      { name: "Behavior", risk: session.riskScore * 0.4 },
-      { name: "Network", risk: session.trustScore < 50 ? 80 : 10 },
-      { name: "Identity", risk: session.primaryCause === 'Identity' ? 90 : 10 },
-      { name: "Device", risk: 15 }
+      { name: "Behavior", risk: Math.min(100, session.riskScore * 1.2) },
+      { name: "Network", risk: session.riskScore > 50 ? 80 : 10 },
+      { name: "Identity", risk: session.primaryCause ? 90 : 10 },
+      { name: "Device", risk: session.riskScore > 30 ? 60 : 15 }
   ]
   
   const trustData = [
-      { name: "Trust", value: session.riskScore },
-      { name: "Risk", value: 100 - session.riskScore }
+      { name: "Trust", value: Math.max(0, 100 - session.riskScore) },
+      { name: "Risk", value: session.riskScore }
   ]
 
   const evidence: EvidenceItem[] = [
-      { id: 1, time: "10:00:05", label: "Login Success", type: "info" },
-      { id: 2, time: "10:05:22", label: "High Velocity Page View", type: "warning" },
-      session.riskScore < 50 ? { id: 3, time: "10:06:00", label: "Impossible Travel Detected", type: "critical" } : null
+      { id: 1, time: session.timestamp.toLocaleTimeString(), label: "Session Initiated", type: "info" },
+      session.primaryCause ? { id: 2, time: new Date(session.timestamp.getTime() + 1000).toLocaleTimeString(), label: `Flag: ${session.primaryCause}`, type: "warning" } : null,
+      session.riskScore >= 50 ? { id: 3, time: new Date(session.timestamp.getTime() + 2000).toLocaleTimeString(), label: "High Risk Threshold Met", type: "critical" } : null
   ].filter((e): e is EvidenceItem => e !== null)
 
   return (

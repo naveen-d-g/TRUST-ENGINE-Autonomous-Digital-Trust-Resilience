@@ -36,7 +36,7 @@ export const useAuthStore = create<AuthState>()(
       user: {
         id: "admin-bypass",
         username: "admin",
-        email: "admin@trustengine.ai",
+        email: "dghere@admin",
         role: "ADMIN",
         name: "Admin User"
       },

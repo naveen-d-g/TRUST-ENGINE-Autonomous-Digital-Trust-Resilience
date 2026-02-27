@@ -26,18 +26,14 @@ def login():
     
     print(f"DEBUG LOGIN: Received username='{username}', password='{password}'")
     
-    # Mock Logic (Replace with DB check)
-    if username == "admin" and password == "admin":
-        role = "admin"
-        platform = "security_platform"
-    elif username == "analyst" and password == "analyst":
-        role = "analyst"
-        platform = "security_platform"
-    elif username == "viewer" and password == "viewer":
-        role = "viewer" 
-        platform = "user_platform"
-    else:
+    # Real DB Check
+    user = User.query.filter((User.email == username) | (User.username == username)).first()
+    
+    if not user or not user.check_password(password):
         return error_response("Invalid credentials", 401)
+        
+    role = user.role.upper()
+    platform = user.platform if hasattr(user, 'platform') else "SECURITY_PLATFORM"
         
     # Generate Session
     session_id = str(uuid.uuid4())

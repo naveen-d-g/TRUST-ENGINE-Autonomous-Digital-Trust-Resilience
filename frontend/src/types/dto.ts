@@ -6,9 +6,9 @@
 // Session DTOs
 export interface SessionDTO {
   session_id: string;
-  user_id: string;
+  user_id?: string;
   ip_address: string;
-  timestamp: string;
+  timestamp?: string;
   created_at?: string;
   risk_score: number;
   decision: string;

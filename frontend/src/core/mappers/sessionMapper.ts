@@ -11,9 +11,8 @@ export function mapSessionDto(dto: SessionDTO): SessionModel {
   if (!dto.session_id) {
     throw new Error('Invalid SessionDTO: missing session_id');
   }
-  if (!dto.user_id) {
-    throw new Error('Invalid SessionDTO: missing user_id');
-  }
+  // Relax user_id requirement for simulated sessions
+  const userId = dto.user_id || 'Anonymous';
   if (!dto.timestamp && !dto.created_at) {
     throw new Error('Invalid SessionDTO: missing timestamp or created_at');
   }
@@ -21,11 +20,11 @@ export function mapSessionDto(dto: SessionDTO): SessionModel {
   try {
     return {
       id: dto.session_id,
-      userId: dto.user_id,
+      userId: userId,
       ipAddress: dto.ip_address || 'Unknown',
       timestamp: new Date(dto.timestamp || dto.created_at!),
       riskScore: dto.risk_score ?? 0,
-      decision: dto.decision || 'MONITOR',
+      decision: dto.decision || (dto as any).final_decision || 'MONITOR',
       domain: dto.domain || 'UNKNOWN',
       trustScore: dto.trust_score ?? 100,
       anomalyCount: dto.anomaly_count ?? 0,
@@ -59,7 +58,6 @@ export function isValidSessionDto(dto: unknown): dto is SessionDTO {
   
   return (
     typeof obj.session_id === 'string' &&
-    typeof obj.user_id === 'string' &&
     (typeof obj.timestamp === 'string' || typeof obj.created_at === 'string') &&
     typeof obj.risk_score === 'number'
   );

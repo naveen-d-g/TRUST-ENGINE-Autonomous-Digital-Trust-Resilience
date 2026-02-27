@@ -156,5 +156,8 @@ class SOCIncidentSimulator:
         print("[SIM] Audit Logs assumed written (No Crash).")
 
 if __name__ == "__main__":
-    sim = SOCIncidentSimulator()
-    sim.run_simulation()
+    from backend.app import app
+    
+    with app.app_context():
+        sim = SOCIncidentSimulator()
+        sim.run_simulation()
