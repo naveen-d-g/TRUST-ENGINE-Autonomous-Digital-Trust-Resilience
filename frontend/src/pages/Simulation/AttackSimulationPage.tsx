@@ -27,7 +27,7 @@ const AttackSimulationPage = () => {
     const handleEvent = (data: any) => {
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleTimeString(),
+            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             type: "SIMULATION_EVENT",
             message: data.message || JSON.stringify(data),
             variant: "warning"
@@ -54,7 +54,7 @@ const AttackSimulationPage = () => {
     setIsRunning(true)
     setEvents(prev => [...prev, {
         id: Date.now().toString(),
-        time: new Date().toLocaleTimeString(),
+        time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         type: "ATTACK_VECTOR",
         message: `Injecting ${label} sequence...`,
         variant: "danger"
@@ -91,7 +91,7 @@ const AttackSimulationPage = () => {
         
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleTimeString(),
+            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             type: "SUCCESS",
             message: `Attack ${label} initiated successfully - Trust Score: ${response.trust_score}`,
             variant: "success"
@@ -101,7 +101,7 @@ const AttackSimulationPage = () => {
         const errorMsg = err.response?.data?.message || err.message || "Network Communication Error";
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleTimeString(),
+            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             type: "ERROR",
             message: `Dispatch Failed: ${errorMsg}`,
             variant: "danger"

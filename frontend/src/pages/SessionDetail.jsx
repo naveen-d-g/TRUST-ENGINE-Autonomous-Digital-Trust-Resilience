@@ -342,7 +342,7 @@ const SessionDetail = () => {
                         
                         <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-1">
                             <span className="text-xs font-mono text-muted-foreground">
-                                {new Date(evt.timestamp_epoch * 1000).toLocaleTimeString()}
+                                {new Date(evt.timestamp_epoch * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </span>
                             <span className="text-sm font-bold text-foreground uppercase tracking-wide">
                                 {evt.event_type} EVENT

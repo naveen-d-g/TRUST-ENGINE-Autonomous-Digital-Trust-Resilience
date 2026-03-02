@@ -42,7 +42,7 @@ const UnifiedSocMonitor = () => {
         const riskVal = stats.metrics?.global_risk_score || 0;
         const trustVal = 100 - riskVal;
         const newPoint = {
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             trust: trustVal,
             risk: riskVal,
         };
@@ -260,7 +260,7 @@ const UnifiedSocMonitor = () => {
                                 return (
                                     <tr key={evt.event_id || idx} className="group hover:bg-blue-500/5 transition-colors">
                                         <td className="px-8 py-4 text-[10px] font-mono text-gray-500">
-                                            {new Date(timestamp * 1000).toLocaleTimeString([], { hour12: true })}
+                                            {new Date(timestamp * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className={`flex justify-center ${getRiskColor(evt)}`}>

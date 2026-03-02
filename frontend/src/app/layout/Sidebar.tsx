@@ -47,7 +47,7 @@ export const Sidebar = () => {
           href="http://localhost:3001" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group text-emerald-400 hover:text-white hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20"
+          className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group text-gray-400 hover:text-white hover:bg-white/5"
         >
           <User className="w-5 h-5" />
           <span className="font-bold text-xs uppercase tracking-widest">Live Login Demo</span>

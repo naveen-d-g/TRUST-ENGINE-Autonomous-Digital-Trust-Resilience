@@ -39,6 +39,17 @@ class InferenceService:
              # Add to explanation
              result.explanation["primary_cause"] = "Simulated Attack (Forced Risk)"
              
+             # 🧪 Distribute forced risk to domains for better dashboard visuals
+             if "metrics" in result.metadata:
+                 m = result.metadata["metrics"]
+                 m["risk_score"] = float(force_risk)
+                 prob = float(force_risk) / 100.0
+                 if session_id.startswith("WEB_SIM_"): m["web_abuse_probability"] = prob
+                 elif session_id.startswith("API_SIM_"): m["api_abuse_probability"] = prob
+                 elif session_id.startswith("NETWORK_SIM_"): m["network_anomaly_score"] = prob
+                 elif session_id.startswith("SYSTEM_SIM_"): m["infra_stress_score"] = prob
+                 elif session_id.startswith("BOT_SIM_"): m["bot_probability"] = prob
+             
              try:
                  # 🧠 LLM REASONING LOOKUP
                  import json
@@ -87,6 +98,10 @@ class InferenceService:
         
         # 2. Update In-Memory Risk History (CRITICAL for Velocity)
         SessionStateEngine.update_risk_history(session_id, result.risk_score)
+        
+        # Drop future telemetry if this session is now dead
+        if result.decision in ["TERMINATE", "TERMINATED", "BLOCK"]:
+             SessionStateEngine.mark_terminated(session_id)
         
         metrics_data = result.metadata.get("metrics", {})
 

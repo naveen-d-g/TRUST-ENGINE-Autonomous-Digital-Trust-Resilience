@@ -24,7 +24,7 @@ export const LiveHeader: React.FC<LiveHeaderProps> = ({ status, lastUpdated }) =
   };
 
   const config = getStatusConfig();
-  const timeStr = typeof lastUpdated === 'number' ? new Date(lastUpdated).toLocaleTimeString() : lastUpdated;
+  const timeStr = typeof lastUpdated === 'number' ? new Date(lastUpdated).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : lastUpdated;
 
   return (
     <div className="flex items-center justify-between mb-6 border-b border-border/50 pb-4 relative overflow-hidden">

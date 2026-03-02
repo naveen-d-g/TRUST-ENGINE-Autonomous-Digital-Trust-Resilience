@@ -70,7 +70,7 @@ export const useMonitoringStore = create<MonitoringStore>((set) => ({
 
     // Update Trend (Rolling 60 points window)
     const currentTrend = currentDomain.trend || [];
-    const newTrend = [...currentTrend, { time: new Date().toLocaleTimeString(), value: safeRiskScore }];
+    const newTrend = [...currentTrend, { time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), value: safeRiskScore }];
     if (newTrend.length > 60) newTrend.shift();
 
     // Update Events (Keep last 50)

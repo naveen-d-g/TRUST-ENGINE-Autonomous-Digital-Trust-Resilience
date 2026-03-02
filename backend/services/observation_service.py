@@ -85,6 +85,8 @@ class SessionStateEngine:
         # 1. functionality: Create if not exists
         if session_id not in cls._sessions:
             cls._sessions[session_id] = {
+                "is_terminated": False,
+                "user_id": getattr(event, 'actor_id', None),
                 "created_at": current_time,
                 "last_active": current_time,
                 "events": deque(maxlen=MAX_WINDOW_SIZE),
@@ -125,8 +127,18 @@ class SessionStateEngine:
                 "infra_stress_window": deque(maxlen=MAX_WINDOW_SIZE),
             }
         
+        
         session = cls._sessions[session_id]
+        
+        # Drop events if session is already terminated to prevent infinite popup loops
+        if session.get("is_terminated", False):
+            return session
+            
         session["last_active"] = current_time
+        # Update user_id dynamically if it was anonymous before but is now known
+        if getattr(event, 'actor_id', None) and getattr(event, 'actor_id') != "anonymous":
+            session["user_id"] = event.actor_id
+            
         # Store as dict for serialization if needed, or keep object if we trust it
         # For Redis compatibility, we'd eventually serialize this whole state.
         # For now, we store the Event object but in get_session_features we rely on simple types.
@@ -372,6 +384,14 @@ class SessionStateEngine:
         if session_id in cls._sessions:
             return list(cls._sessions[session_id]["risk_history"])
         return []
+
+    @classmethod
+    def mark_terminated(cls, session_id):
+        """
+        Marks a session as terminated to prevent further event ingestion.
+        """
+        if session_id in cls._sessions:
+            cls._sessions[session_id]["is_terminated"] = True
 
     @classmethod
     def prune_expired_sessions(cls):

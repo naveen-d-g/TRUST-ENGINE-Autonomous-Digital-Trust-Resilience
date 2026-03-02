@@ -149,10 +149,16 @@ class IngestionService:
             event.recommendation = "TERMINATE_BOT_SESSION"
             event.raw_features["bot_detected"] = True
             event.raw_features["bot_reason"] = bot_reason
-        elif "risk_score" in payload:
-            event.risk_score = payload["risk_score"]
-        if "recommendation" in payload:
-            event.recommendation = payload["recommendation"]
+        else:
+            if "risk_score" in raw_features:
+                event.risk_score = float(raw_features["risk_score"])
+            elif "risk_score" in payload:
+                event.risk_score = float(payload["risk_score"])
+            
+            if "final_decision" in raw_features:
+                event.recommendation = raw_features["final_decision"]
+            elif "recommendation" in payload:
+                event.recommendation = payload["recommendation"]
         
         return event
 
@@ -208,7 +214,7 @@ class IngestionService:
         # B. Prepare Inference Request
         inference_payload = {
             "session_id": session_id,
-            "user_id": triggering_event.raw_features.get("user_id"),
+            "user_id": triggering_event.actor_id or triggering_event.raw_features.get("user_id"),
             "features": session_copy,
             "trigger": triggering_event.event_type
         }

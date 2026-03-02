@@ -50,6 +50,7 @@ def terminate_session():
         from backend.services.observation_service import SessionStateEngine
         if session_id in SessionStateEngine._sessions:
             SessionStateEngine._sessions[session_id]["final_decision"] = "TERMINATED"
+            SessionStateEngine.mark_terminated(session_id)
             logger.info(f"Marked memory session {session_id} as TERMINATED")
         else:
             logger.warning(f"Session {session_id} not found in DB or Memory, attempting termination webhook anyway.")
@@ -141,6 +142,9 @@ def terminate_user(user_id):
         session_record.final_decision = "TERMINATED"
         
     for sid in sids_to_terminate:
+        from backend.services.observation_service import SessionStateEngine
+        SessionStateEngine.mark_terminated(sid)
+        
         socketio.emit(
             "termination_event",
             {"session_id": sid, "status": "TERMINATED", "actor": getattr(g, 'user_id', 'system')},

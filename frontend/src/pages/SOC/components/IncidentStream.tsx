@@ -37,7 +37,7 @@ export const IncidentStream: React.FC<IncidentStreamProps> = ({ incidents }) => 
                                     <span>•</span>
                                     <span className="uppercase">{inc.domain}</span>
                                     <span>•</span>
-                                    <span>{new Date(inc.created_at).toLocaleTimeString()}</span> 
+                                    <span>{new Date(inc.created_at).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> 
                                 </div>
                             </div>
                         </div>

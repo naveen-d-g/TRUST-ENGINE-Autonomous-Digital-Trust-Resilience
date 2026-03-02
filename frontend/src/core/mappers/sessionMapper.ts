@@ -23,6 +23,8 @@ export function mapSessionDto(dto: SessionDTO): SessionModel {
       userId: userId,
       ipAddress: dto.ip_address || 'Unknown',
       timestamp: new Date(dto.timestamp || dto.created_at!),
+      lastSeen: (dto as any).last_seen ? new Date((dto as any).last_seen) : undefined, // Map last_seen if exists
+      isActive: (dto as any).is_active ?? false, // New active flag from backend
       riskScore: dto.risk_score ?? 0,
       decision: dto.decision || (dto as any).final_decision || 'MONITOR',
       domain: dto.domain || 'UNKNOWN',

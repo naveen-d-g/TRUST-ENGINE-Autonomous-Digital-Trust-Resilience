@@ -54,7 +54,7 @@ def run_api_bot(endpoint, iterations, delay):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trust Engine - Target App API Bot")
     parser.add_argument("--url", type=str, default="http://localhost:3001/", help="Target Login URL")
-    parser.add_argument("--count", type=int, default=10, help="Number of login attempts")
+    parser.add_argument("--count", type=int, default=5, help="Number of login attempts")
     parser.add_argument("--delay", type=float, default=0.05, help="Delay between requests in seconds")
     args = parser.parse_args()
     

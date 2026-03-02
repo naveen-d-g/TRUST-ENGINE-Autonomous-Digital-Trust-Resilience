@@ -40,6 +40,7 @@ def list_sessions():
             d = s.to_dict()
             if d.get("risk_score") == 0 and d.get("trust_score") is not None:
                 d["risk_score"] = 100.0 - d["trust_score"]
+            d["is_active"] = False # DB sessions are historical by default
             results.append(d)
         existing_ids = set(s.session_id for s in sessions)
 
@@ -48,6 +49,10 @@ def list_sessions():
         for sid, data in SessionStateEngine._sessions.items():
             # Skip if already in DB results (simple de-dupe)
             if sid in existing_ids:
+                # Update existing results to be 'active' if they are in memory
+                for r in results:
+                    if r["session_id"] == sid:
+                        r["is_active"] = True
                 continue
                 
             # Apply Filters to In-Memory Sessions
@@ -92,7 +97,8 @@ def list_sessions():
                 "signal_count": 0,
                 "status": "ACTIVE", 
                 "final_decision": "ALLOW",
-                "domain": domain
+                "domain": domain,
+                "is_active": True
             })
             
         # 3. Combine and Sort
@@ -124,6 +130,38 @@ def list_sessions():
     except Exception as e:
         return error_response(str(e), 500)
 
+@session_bp.route("/cleanup-simulated", methods=["DELETE"])
+def cleanup_simulated_sessions():
+    """
+    Purge simulated sessions from the database.
+    Restricted to _SIM_ and sess-sim- prefixes.
+    """
+    from backend.extensions import db
+    from backend.db.models import Session, Event, SessionMetric, AuditLog
+    try:
+        # Find sessions with simulation prefixes
+        sim_sessions = Session.query.filter(
+            (Session.session_id.like("%_SIM_%")) | 
+            (Session.session_id.like("sess-sim-%"))
+        ).all()
+        
+        count = len(sim_sessions)
+        for s in sim_sessions:
+            # Delete associated records first (FK constraints)
+            # Use filters specifically for session_id 
+            SessionMetric.query.filter_by(session_id=s.session_id).delete()
+            Event.query.filter_by(session_id=s.session_id).delete()
+            # AuditLog doesn't have a direct session_id FK in schema, but might be referenced in JSON
+            # However, simpler is just deleting the session if nothing else blocks.
+            # Based on error, it was session_metrics and events.
+            db.session.delete(s)
+            
+        db.session.commit()
+        return success_response({"deleted_count": count, "message": f"Successfully purged {count} simulated sessions."})
+    except Exception as e:
+        db.session.rollback()
+        return error_response(str(e), 500)
+
 @session_bp.route("/<session_id>", methods=["GET"])
 @session_bp.route("/<session_id>", methods=["GET"])
 def get_session_details(session_id):
@@ -143,7 +181,7 @@ def get_session_details(session_id):
                 events.append({
                     "event_id": e.id,
                     "type": e.event_type,
-                    "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                    "timestamp": e.timestamp.isoformat() + "Z" if e.timestamp else None,
                     "domain": "BATCH",
                     "risk": data.get("risk_score", 0) 
                 })

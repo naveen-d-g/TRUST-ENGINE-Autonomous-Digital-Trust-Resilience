@@ -93,9 +93,9 @@ const SessionDetailsPage = () => {
   ]
 
   const evidence: EvidenceItem[] = [
-      { id: 1, time: session.timestamp.toLocaleTimeString(), label: "Session Initiated", type: "info" },
-      session.primaryCause ? { id: 2, time: new Date(session.timestamp.getTime() + 1000).toLocaleTimeString(), label: `Flag: ${session.primaryCause}`, type: "warning" } : null,
-      session.riskScore >= 50 ? { id: 3, time: new Date(session.timestamp.getTime() + 2000).toLocaleTimeString(), label: "High Risk Threshold Met", type: "critical" } : null
+      { id: 1, time: session.timestamp.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), label: "Session Initiated", type: "info" },
+      session.primaryCause ? { id: 2, time: new Date(session.timestamp.getTime() + 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), label: `Flag: ${session.primaryCause}`, type: "warning" } : null,
+      session.riskScore >= 50 ? { id: 3, time: new Date(session.timestamp.getTime() + 2000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), label: "High Risk Threshold Met", type: "critical" } : null
   ].filter((e): e is EvidenceItem => e !== null)
 
   return (

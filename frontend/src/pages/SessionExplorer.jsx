@@ -232,10 +232,10 @@ const SessionExplorer = () => {
                   <td className="px-6 py-5">
                       <div className="flex flex-col">
                           <span className="text-xs text-foreground font-medium">
-                              {row.start_time ? new Date(row.start_time).toLocaleDateString() : 'N/A'}
+                              {row.start_time ? new Date(row.start_time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono">
-                              {row.start_time ? new Date(row.start_time).toLocaleTimeString() : ''}
+                              {row.start_time ? new Date(row.start_time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
                           </span>
                       </div>
                   </td>

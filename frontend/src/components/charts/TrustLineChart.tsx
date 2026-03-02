@@ -31,7 +31,7 @@ export const TrustLineChart = ({
         <XAxis 
           dataKey="time" 
           stroke={colors.neonBlue} 
-          tickFormatter={(time) => new Date(time).toLocaleTimeString()} 
+          tickFormatter={(time) => new Date(time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} 
           style={{ fontSize: '12px' }}
         />
         <YAxis stroke="#94a3b8" />

@@ -133,7 +133,7 @@ const ApiSecurityPage = () => {
                       {api.events.length > 0 ? (
                         api.events.map((event, i) => (
                           <tr key={i} className="hover:bg-gray-800/30 transition-colors">
-                              <td className="px-6 py-4 font-mono text-xs">{new Date(event.timestamp).toLocaleTimeString()}</td>
+                              <td className="px-6 py-4 font-mono text-xs">{new Date(event.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
                               <td className="px-6 py-4">
                                   <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
                                     event.riskScore > 80 ? 'bg-red-900/30 text-red-400 border border-red-900/50' : 

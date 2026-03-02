@@ -53,17 +53,19 @@ export const LiveProvider = ({ children }) => {
 
               // Dispatch to Monitoring Store for Domain Dashboards
               // We do this here to avoid valid duplicate SSE connections
+              const parsedRiskScore = Number(data.risk_score) || Number(data.raw_features?.risk_score) || Number(data.raw_features?.payload?.risk_score) || 0;
+              const parsedDecision = data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision;
+
               const monitorEvt = {
                   id: data.event_id,
                   domain: data.domain || 'WEB',
                   timestamp: data.timestamp_epoch ? new Date(data.timestamp_epoch * 1000).toISOString() : new Date().toISOString(),
                   ip: data.raw_features?.ip || data.ip || '0.0.0.0',
                   route: data.raw_features?.path || data.raw_features?.endpoint || data.raw_features?.payload?.route || data.route || '/',
-                  riskScore: data.risk_score || data.raw_features?.risk_score || data.raw_features?.payload?.risk_score || 0,
-                  decision: (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision) && 
-                            (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision) !== 'ALLOW' 
-                      ? (data.final_decision || data.raw_features?.final_decision || data.raw_features?.payload?.final_decision)
-                      : (data.risk_score > 85 ? 'ESCALATE' : data.risk_score > 50 ? 'RESTRICT' : 'ALLOW'),
+                  riskScore: parsedRiskScore,
+                  decision: (parsedDecision && parsedDecision !== 'ALLOW') 
+                      ? parsedDecision
+                      : (parsedRiskScore > 85 ? 'ESCALATE' : parsedRiskScore > 50 ? 'RESTRICT' : 'ALLOW'),
                   suggestion: data.recommendation || 'None',
                   payload: data.raw_features || {},
                   type: data.event_type || 'unknown' // Ensure type is present

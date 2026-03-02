@@ -164,7 +164,7 @@ const NotificationSidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                                         {attack.decision || 'UNKNOWN'}
                                     </span>
                                     <span className="text-[9px] font-bold text-gray-500 tracking-wider">
-                                        {attack.timestamp ? new Date(attack.timestamp).toLocaleTimeString() : 'N/A'}
+                                        {attack.timestamp ? new Date(attack.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}
                                     </span>
                                 </div>
                                 <div className="text-xs font-black text-white mb-2 tracking-wide uppercase group-hover:text-red-400 transition-colors">

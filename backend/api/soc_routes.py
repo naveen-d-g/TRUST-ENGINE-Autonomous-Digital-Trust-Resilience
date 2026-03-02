@@ -19,7 +19,7 @@ def list_incidents():
             "id": str(i.id),
             "status": i.status.value,
             "severity": i.severity.value,
-            "created_at": i.created_at.isoformat()
+            "created_at": i.created_at.isoformat() + 'Z' if i.created_at else None
         } for i in incidents
     ])
 
@@ -39,8 +39,8 @@ def get_incident(incident_id):
         "id": str(incident.id),
         "status": incident.status.value,
         "severity": incident.severity.value,
-        "created_at": incident.created_at.isoformat() if incident.created_at else None,
-        "updated_at": incident.updated_at.isoformat() if incident.updated_at else None
+        "created_at": incident.created_at.isoformat() + 'Z' if incident.created_at else None,
+        "updated_at": incident.updated_at.isoformat() + 'Z' if incident.updated_at else None
     })
 
 @bp.route("/incidents/<incident_id>/contain", methods=["POST"])
@@ -94,7 +94,7 @@ def list_audit_logs():
         {
             "action": l.action,
             "actor": l.actor_id,
-            "timestamp": l.timestamp.isoformat(),
+            "timestamp": l.timestamp.isoformat() + 'Z',
             "hash": l.entry_hash
         } for l in logs
     ])

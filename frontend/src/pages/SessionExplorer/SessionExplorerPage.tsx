@@ -13,7 +13,7 @@ const SessionExplorerPage = () => {
   useEffect(() => {
     // Debounce search
     const timer = setTimeout(() => {
-      fetchSessions()
+      fetchSessions({ search: search || undefined })
     }, 400)
     return () => clearTimeout(timer)
   }, [search, fetchSessions])
@@ -26,7 +26,7 @@ const SessionExplorerPage = () => {
       header: "Session ID",
       accessorKey: "session_id" as keyof SessionModel,
       cell: (item: SessionModel) => (
-        <span className="font-mono text-neonBlue text-xs">{item.id?.substring(0, 8)}...</span>
+        <span className="font-mono text-neonBlue text-xs">{item.id}</span>
       ),
     },
     {
@@ -60,16 +60,18 @@ const SessionExplorerPage = () => {
       header: "Status",
       accessorKey: "decision" as keyof SessionModel,
       cell: (item: SessionModel) => {
-        const isOffline = item.decision === "TERMINATE" || item.decision === "TERMINATED";
+        const isTerminated = item.decision === "TERMINATE" || item.decision === "TERMINATED";
+        const isActive = item.isActive;
+        
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-gray-600' : 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`} />
-              <span className={isOffline ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : "text-neonGreen font-bold uppercase tracking-wider text-[10px]"}>
-                {isOffline ? "Offline" : "Online"}
+              <div className={`w-2 h-2 rounded-full ${isTerminated ? 'bg-gray-600' : isActive ? 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-500'}`} />
+              <span className={isTerminated ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : isActive ? "text-neonGreen font-bold uppercase tracking-wider text-[10px]" : "text-gray-400 font-medium uppercase tracking-wider text-[10px]"}>
+                {isTerminated ? "Terminated" : isActive ? "Online" : "Offline"}
               </span>
             </div>
-            {isOffline && item.primaryCause && (
+            {isTerminated && item.primaryCause && (
                <span className="text-[9px] text-gray-500 font-medium mt-1 uppercase tracking-tight truncate max-w-[120px]" title={item.primaryCause}>
                  {item.primaryCause}
                </span>
@@ -85,8 +87,12 @@ const SessionExplorerPage = () => {
     },
     {
       header: "Last Seen",
-      accessorKey: "last_seen" as keyof SessionModel,
-      cell: (item: SessionModel) => <span className="text-gray-500 text-xs">{new Date(item.lastSeen || Date.now()).toLocaleTimeString()}</span>,
+      accessorKey: "lastSeen" as keyof SessionModel,
+      cell: (item: SessionModel) => (
+        <span className="text-gray-500 text-xs">
+          {item.lastSeen ? item.lastSeen.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}
+        </span>
+      ),
     },
   ]
 

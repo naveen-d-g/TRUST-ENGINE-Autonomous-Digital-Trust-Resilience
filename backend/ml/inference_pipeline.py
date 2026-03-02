@@ -125,7 +125,7 @@ def evaluate_session(session_state: Dict[str, Any], context: Dict[str, Any] = No
         policy_version="1.0.0", # TODO: Version policy engine
         metadata={
              "metrics": {
-                "bot_probability": probs.get("auth", 0.0),
+                "bot_probability": max(probs.get("auth", 0.0), float(combined_features.get("bot_probability_score", 0.0))),
                 "attack_probability": max(probs.get("auth", 0), probs.get("network", 0), probs.get("system", 0)),
                 "anomaly_score": probs.get("anomaly", 0.0),
                 "risk_score": risk_score,

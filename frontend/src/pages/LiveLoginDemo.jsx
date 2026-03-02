@@ -27,7 +27,7 @@ const LiveLoginDemo = () => {
   };
 
   const addLog = (msg) => {
-      setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg }]);
+      setLogs(prev => [...prev, { time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), msg }]);
   };
 
   const startDemo = async () => {

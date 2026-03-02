@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string
 import uuid
 import datetime
-from confluent_kafka import Producer
 import json
 import traceback
 from flask_cors import CORS
@@ -75,6 +74,7 @@ def login():
     import time
     if request.method == "POST":
         username = request.form.get("username")
+        password = request.form.get("password", "demo_secure")
         
         # Calculate real duration
         loaded_time_str = request.form.get("loaded_time")
@@ -94,6 +94,7 @@ def login():
         sess_id = str(uuid.uuid4())
         session["session_id"] = sess_id
         session["actor_id"] = username
+        session["current_password"] = password # Save current password to session
         ACTIVE_SESSIONS[sess_id] = "ACTIVE"
         
         send_event("WEB", "AUTH_LOGIN", sess_id, username, {
@@ -116,6 +117,10 @@ def login():
         button {{ background: #0f172a; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }}
         button:hover {{ background: #1e293b; }}
         h2 {{ margin-top: 0; color: #0f172a; }}
+        .pwd-group {{ position: relative; }}
+        .pwd-group input {{ width: 100%; box-sizing: border-box; padding-right: 40px; margin: 8px 0; }}
+        .pwd-toggle {{ position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }}
+        .pwd-toggle:hover {{ color: #0f172a; }}
     </style>
     </head>
     <body>
@@ -124,8 +129,13 @@ def login():
         <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Login to simulated environment</p>
         <form method="POST">
             <input type="hidden" name="loaded_time" value="{int(time.time() * 1000)}">
-            <input type="text" name="username" value="demo_user" placeholder="Username" required><br>
-            <input type="password" name="password" value="password" placeholder="Password" required><br>
+            <input type="text" name="username" value="demo_user" placeholder="Username" required>
+            <div class="pwd-group">
+                <input type="password" id="login_password" name="password" value="demo_secure" placeholder="Password" required>
+                <span class="pwd-toggle" onclick="togglePwd('login_password', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
             <div class="captcha-box">
                 <div>
                    <input type="checkbox" id="captcha" name="captcha" class="checkbox" required>
@@ -137,6 +147,21 @@ def login():
             <button type="submit">Login</button>
         </form>
     </div>
+    <script>
+        const eyeOpenSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        const eyeClosedSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+        
+        function togglePwd(id, iconSpan) {{
+            const el = document.getElementById(id);
+            if (el.type === 'password') {{
+                el.type = 'text';
+                iconSpan.innerHTML = eyeClosedSVG;
+            }} else {{
+                el.type = 'password';
+                iconSpan.innerHTML = eyeOpenSVG;
+            }}
+        }}
+    </script>
     </body>
     </html>
     """
@@ -153,14 +178,33 @@ def force_password_reset():
         
     if request.method == "POST":
         new_password = request.form.get("new_password")
-        if new_password == "password":
+        confirm_password = request.form.get("confirm_password")
+        old_password = session.get("current_password", "demo_secure")
+        
+        if new_password != confirm_password:
+            error_msg = "<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Error: Passwords do not match.</div>"
+        elif new_password == old_password:
             error_msg = "<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Error: New password cannot be the same as the old password.</div>"
         else:
             # In a real app, update the DB here.
-            # Clear the terminated session, force them to log back in with new credentials.
+            # Clear the terminated session
             ACTIVE_SESSIONS.pop(sess_id, None)
-            session.clear()
-            return redirect(url_for("login"))
+            
+            # Create a brand new active session
+            new_sess_id = str(uuid.uuid4())
+            session["session_id"] = new_sess_id
+            session["current_password"] = new_password
+            ACTIVE_SESSIONS[new_sess_id] = "ACTIVE"
+            
+            # Send LOGIN_SUCCESS event to establish new trust baseline
+            send_event("AUTH", "auth", new_sess_id, actor_id, {
+                "status": "success",
+                "auth_method": "password_reset",
+                "risk_score": 0.0,
+                "final_decision": "ALLOW"
+            })
+            
+            return redirect(url_for("home"))
         
     html = f"""
     <html>
@@ -173,6 +217,10 @@ def force_password_reset():
         button:hover {{ background: #b91c1c; }}
         h2 {{ margin-top: 0; color: #ef4444; display: flex; align-items: center; gap: 10px;}}
         .alert-box {{ background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); padding: 15px; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #fca5a5; margin-bottom: 20px;}}
+        .pwd-group {{ position: relative; }}
+        .pwd-group input {{ width: 100%; box-sizing: border-box; padding-right: 40px; }}
+        .pwd-toggle {{ position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }}
+        .pwd-toggle:hover {{ color: white; }}
     </style>
     </head>
     <body>
@@ -186,11 +234,36 @@ def force_password_reset():
         </div>
         {error_msg}
         <form method="POST">
-            <input type="password" name="new_password" placeholder="New Secure Password" required minlength="8"><br>
-            <input type="password" name="confirm_password" placeholder="Confirm Password" required minlength="8"><br>
+            <div class="pwd-group">
+                <input type="password" id="new_password" name="new_password" placeholder="New Secure Password" required minlength="8">
+                <span class="pwd-toggle" onclick="togglePwd('new_password', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
+            <div class="pwd-group">
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required minlength="8">
+                <span class="pwd-toggle" onclick="togglePwd('confirm_password', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
             <button type="submit">Update Password & Login</button>
         </form>
     </div>
+    <script>
+        const eyeOpenSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        const eyeClosedSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+        
+        function togglePwd(id, iconSpan) {{
+            const el = document.getElementById(id);
+            if (el.type === 'password') {{
+                el.type = 'text';
+                iconSpan.innerHTML = eyeClosedSVG;
+            }} else {{
+                el.type = 'password';
+                iconSpan.innerHTML = eyeOpenSVG;
+            }}
+        }}
+    </script>
     </body>
     </html>
     """
@@ -251,7 +324,7 @@ def home():
     <body>
     
     <div class="navbar">
-        <div style="font-weight: bold; font-size: 18px;">Acme Corp <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
+        <div style="font-weight: bold; font-size: 18px;">Target App <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
         <div class="nav-links">
             <a href="/home" class="active">Home</a>
             <a href="/dashboard">Dashboard</a>
@@ -328,7 +401,7 @@ def dashboard():
     </head>
     <body>
     <div class="navbar">
-        <div style="font-weight: bold; font-size: 18px;">Acme Corp <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
+        <div style="font-weight: bold; font-size: 18px;">Target App <span style="font-weight: normal; color: #94a3b8; margin-left:10px;">| Internal Gateway</span></div>
         <div class="nav-links">
             <a href="/home">Home</a>
             <a href="/dashboard" class="active">Dashboard</a>
@@ -413,7 +486,7 @@ def api_data():
 def simulate_attack():
     sess_id = session.get("session_id")
     actor_id = session.get("actor_id")
-    send_event("NETWORK", "SYSTEM_ERROR", sess_id, actor_id, {
+    send_event("NETWORK", "network", sess_id, actor_id, {
         "status_code": 403,
         "metrics": {"packet_size": 1500},
         "attack_signature": "SQL_INJECTION_ATTEMPT",
@@ -421,7 +494,7 @@ def simulate_attack():
         "risk_score": 85.5,
         "final_decision": "RESTRICT"
     })
-    send_event("API", "API_CALL", sess_id, actor_id, {
+    send_event("API", "api", sess_id, actor_id, {
         "status_code": 403,
         "attack_signature": "DATA_EXFILTRATION_PATTERN",
         "severity": "CRITICAL",
@@ -468,4 +541,4 @@ def terminate_session():
     return jsonify({"status": "ignored", "message": "Session not found"}), 404
 
 if __name__ == "__main__":
-    app.run(port=3001, debug=True)
+    app.run(host="0.0.0.0", port=3001, debug=True)

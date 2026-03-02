@@ -86,7 +86,7 @@ const Dashboard = () => {
           {lastUpdated && (
             <div className="text-right">
               <span className="block text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Sync Integrity</span>
-              <span className="text-xs text-muted-foreground/80 font-medium">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+              <span className="text-xs text-muted-foreground/80 font-medium">Last updated: {lastUpdated.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </div>
           )}
           <button 

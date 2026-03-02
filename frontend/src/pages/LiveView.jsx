@@ -148,7 +148,7 @@ const LiveView = () => {
                         return (
                         <div key={evt.event_id || idx} className="grid grid-cols-12 gap-2 text-sm items-center hover:bg-white/5 p-1 rounded transition-colors group">
                              <div className="col-span-2 text-muted-foreground text-xs">
-                                {new Date(evt.timestamp_epoch * 1000).toLocaleTimeString()}
+                                {new Date(evt.timestamp_epoch * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                              </div>
                              <div className="col-span-1">
                                 <span className={`flex items-center gap-1 ${getRiskColor(evt)}`}>

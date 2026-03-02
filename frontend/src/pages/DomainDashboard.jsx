@@ -146,7 +146,7 @@ const DomainDashboard = ({ title, domainKey }) => {
                                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} />
                                 <XAxis 
                                     dataKey="timestamp_epoch" 
-                                    tickFormatter={(t) => new Date(t * 1000).toLocaleTimeString()} 
+                                    tickFormatter={(t) => new Date(t * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} 
                                     stroke="#94a3b8" 
                                     tick={{fontSize: 10}} 
                                     minTickGap={10} // Enforce minimal gap to simulate ~10s distribution visibility if data is dense
@@ -154,7 +154,7 @@ const DomainDashboard = ({ title, domainKey }) => {
                                 />
                                 <YAxis stroke="#94a3b8" tick={{fontSize: 12}} />
                                 <Tooltip 
-                                    labelFormatter={(t) => new Date(t * 1000).toLocaleTimeString()}
+                                    labelFormatter={(t) => new Date(t * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                                 />
@@ -230,7 +230,7 @@ const DomainDashboard = ({ title, domainKey }) => {
 
                                 return (
                                 <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-3 text-sm text-foreground font-mono">{evt.timestamp_epoch ? new Date(evt.timestamp_epoch * 1000).toLocaleTimeString() : 'N/A'}</td>
+                                    <td className="px-6 py-3 text-sm text-foreground font-mono">{evt.timestamp_epoch ? new Date(evt.timestamp_epoch * 1000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
                                     <td className="px-6 py-3 text-sm">
                                         <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase
                                             ${evt.severity === 'high' || evt.severity === 'critical' ? 'bg-red-500/10 text-red-500' : 

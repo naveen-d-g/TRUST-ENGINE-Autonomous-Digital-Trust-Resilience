@@ -42,8 +42,8 @@ class Session(db.Model):
         return {
             "session_id": self.session_id,
             "user_id": self.user_id or "Anonymous",
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
+            "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
+            "last_seen": self.last_seen.isoformat() + "Z" if self.last_seen else None,
             "trust_score": self.trust_score,
             "risk_score": self.risk_score,
             "final_decision": self.final_decision,
@@ -94,7 +94,7 @@ class Event(db.Model):
             "id": self.event_id,
             "session_id": self.session_id,
             "event_type": self.event_type,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "timestamp": self.timestamp.isoformat() + "Z" if self.timestamp else None,
             "payload": self.payload,
             "domain": self.domain,
             "actor_id": self.actor_id,
@@ -120,7 +120,7 @@ class Signal(db.Model):
             "signal_type": self.signal_type,
             "severity": self.severity,
             "risk_score": self.risk_score,
-            "timestamp": self.created_at.isoformat() if self.created_at else None,
+            "timestamp": self.created_at.isoformat() + "Z" if self.created_at else None,
             "metadata": self.signal_metadata
         }
 
@@ -146,8 +146,8 @@ class Incident(db.Model):
             "tenant_id": self.tenant_id,
             "status": self.status.value,
             "severity": self.severity.value,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None
         }
 
 class RecoveryAction(db.Model):
@@ -252,7 +252,7 @@ class User(db.Model):
             "role": self.role,
             "platform": self.platform,
             "password_reset_required": self.password_reset_required,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "created_at": self.created_at.isoformat() + "Z" if self.created_at else None
         }
 
 class BatchJob(db.Model):
@@ -276,8 +276,8 @@ class BatchJob(db.Model):
             "status": self.status,
             "total_rows": self.total_rows,
             "processed_rows": self.processed_rows,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "started_at": self.started_at.isoformat() + "Z" if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() + "Z" if self.completed_at else None,
             "result_hash": self.result_hash
         }
 
@@ -331,6 +331,6 @@ class MonitoringEvent(db.Model):
             "risk_score": self.risk_score,
             "decision": self.decision,
             "suggestion": self.suggestion,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "timestamp": self.timestamp.isoformat() + "Z" if self.timestamp else None,
             "payload": self.payload
         }

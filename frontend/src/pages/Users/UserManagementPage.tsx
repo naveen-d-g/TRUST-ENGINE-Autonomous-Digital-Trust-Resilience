@@ -176,7 +176,7 @@ export default function UserManagementPage() {
                       </span>
                     </td>
                     <td className="p-4 text-xs tracking-wide text-gray-300">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(user.created_at).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
                     <td className="p-4 text-xs tracking-wide text-gray-500">
                       {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}

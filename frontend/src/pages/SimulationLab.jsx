@@ -413,7 +413,7 @@ const SimulationLab = () => {
                                         {e.event_type}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                        {new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                        {new Date(e.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs mt-2">

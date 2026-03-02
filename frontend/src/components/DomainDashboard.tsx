@@ -113,7 +113,7 @@ export const DomainDashboard: React.FC<DomainDashboardProps> = ({
                                     <div className="text-[10px] font-mono text-muted-foreground mt-1 flex gap-2">
                                         <span className="opacity-50">EV-ID: {event.id.padStart(4, '0')}</span>
                                         <span className="opacity-50">•</span>
-                                        <span className="opacity-50">{new Date().toLocaleTimeString()}</span>
+                                        <span className="opacity-50">{new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                     </div>
                                 </div>
                             </motion.div>

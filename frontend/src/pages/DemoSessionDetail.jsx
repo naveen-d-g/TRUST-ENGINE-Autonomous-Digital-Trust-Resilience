@@ -35,7 +35,7 @@ const DemoSessionDetail = () => {
     // timeline has events. We need to reconstruct score if it's not stored per event?
     // checking DemoEvent model... it DOES have "current_trust_score".
     const chartData = timeline.map(e => ({
-        time: new Date(e.timestamp).toLocaleTimeString(),
+        time: new Date(e.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         score: e.details?.current_trust_score || e.current_trust_score || 100
     }));
 
@@ -145,7 +145,7 @@ const DemoSessionDetail = () => {
                              {timeline.map((event, idx) => (
                                  <div key={idx} className="relative">
                                      <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-900 border-2 border-purple-500"></div>
-                                     <div className="text-xs text-gray-500 font-mono mb-1">{new Date(event.timestamp).toLocaleTimeString()}</div>
+                                     <div className="text-xs text-gray-500 font-mono mb-1">{new Date(event.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                                      <div className="font-bold text-gray-200">{event.event_type}</div>
                                      <div className="text-xs text-gray-400 font-mono mt-1">Score: {event.details?.current_trust_score?.toFixed(1) || event.current_trust_score?.toFixed(1) || '-'}</div>
                                  </div>

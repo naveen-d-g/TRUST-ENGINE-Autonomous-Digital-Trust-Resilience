@@ -46,7 +46,7 @@ def get_dashboard_metrics():
         # Bot vs attack ratio
         bot_avg = db.session.query(func.avg(SessionMetric.bot_probability)).scalar() or 0
         attack_avg = db.session.query(func.avg(SessionMetric.attack_probability)).scalar() or 0
-        attack_ratio = round(attack_avg / bot_avg, 2) if bot_avg > 0 else 0
+        attack_ratio = round(bot_avg / attack_avg, 2) if attack_avg > 0 else round(bot_avg, 2)
         
         # Decision distribution
         decision_dist_query = db.session.query(
@@ -98,31 +98,59 @@ def get_dashboard_metrics():
                     domain_recs[key] = latest_session.recommended_action
 
 
+        # 🛡️ Domain Risk Breakdown (Real-time)
+        domain_risk_res = db.session.query(
+            func.avg(SessionMetric.web_abuse_probability).label('web'),
+            func.avg(SessionMetric.api_abuse_probability).label('api'),
+            func.avg(SessionMetric.network_anomaly_score).label('network'),
+            func.avg(SessionMetric.infra_stress_score).label('infra')
+        ).first()
+        
+        domain_risk = {
+            "web": round(float(domain_risk_res[0] or 0) * 100, 1),
+            "api": round(float(domain_risk_res[1] or 0) * 100, 1),
+            "network": round(float(domain_risk_res[2] or 0) * 100, 1),
+            "infra": round(float(domain_risk_res[3] or 0) * 100, 1)
+        }
+
+        # Calculate real primary risk vectors from causes in the last 24h
+        last_24h = datetime.utcnow() - timedelta(hours=24)
+        risk_vectors_query = db.session.query(
+            Session.primary_cause, 
+            func.count(Session.primary_cause)
+        ).filter(
+            Session.created_at >= last_24h,
+            Session.primary_cause != None,
+            Session.primary_cause != "Allow"
+        ).group_by(Session.primary_cause).order_by(func.count(Session.primary_cause).desc()).limit(5).all()
+        
+        # Calculate total risk instances to get percentages
+        total_risk_instances = sum(res[1] for res in risk_vectors_query) or 1
+        primary_risk_vectors = [
+            {"name": res[0], "value": round((res[1] / total_risk_instances) * 100, 1)} 
+            for res in risk_vectors_query
+        ] or [{"name": "No active threats", "value": 0}]
+
         return jsonify({
-            "total_sessions": 2011, 
+            "total_sessions": total_sessions, 
             "active_sessions": active_sessions,
             "active_incidents": active_incidents,
             "critical_incidents": critical_incidents,
             "avg_risk_score": float(avg_risk),
             "blocked_sessions": blocked_sessions,
-            "global_trust_score": 9.8,
-            "attack_ratio": 0.04,
+            "global_trust_score": round(float(global_trust), 1),
+            "attack_ratio": attack_ratio,
             "sessions_by_decision": sessions_by_decision,
             "sessions_by_severity": sessions_by_severity,
             "decision_distribution": {
-                "trusted": sessions_by_decision.get('ALLOW', 450),
-                "suspicious": sessions_by_decision.get('CHALLENGE', 120),
-                "malicious": sessions_by_decision.get('REJECT', 80)
+                "trusted": sessions_by_decision.get('ALLOW', 0),
+                "suspicious": sessions_by_decision.get('CHALLENGE', 0),
+                "malicious": sessions_by_decision.get('TERMINATED', 0) + sessions_by_decision.get('REJECT', 0)
             },
+            "domain_risk": domain_risk,
             "detection_sensitivity": "High",
             "domain_recommendations": domain_recs,
-            "primary_risk_vectors": [
-                {"name": "Overall trust degrad...", "value": 90},
-                {"name": "Captcha verification...", "value": 75},
-                {"name": "Attack like login pa...", "value": 65},
-                {"name": "Automated behavior d...", "value": 50},
-                {"name": "Session behavior ano...", "value": 40}
-            ]
+            "primary_risk_vectors": primary_risk_vectors
         })
         
     except Exception as e:

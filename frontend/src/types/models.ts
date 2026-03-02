@@ -18,6 +18,7 @@ export interface SessionModel {
   source: string;
   label?: string; // MALICIOUS, SUSPICIOUS, BENIGN
   lastSeen?: Date;
+  isActive: boolean;
   primaryCause?: string;
   recommendedAction?: string;
 }

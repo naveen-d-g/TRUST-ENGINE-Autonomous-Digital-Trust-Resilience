@@ -146,7 +146,7 @@ export const IncidentDetail: React.FC = () => {
                                                        ACT-O: {a.type}
                                                    </span>
                                                    <span className="text-xs text-muted-foreground font-mono opacity-50 mt-0.5">
-                                                       {new Date(a.timestamp).toLocaleTimeString()}
+                                                       {new Date(a.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                    </span>
                                                </div>
                                                <StatusBadge status={a.status} className="text-[9px]" />
@@ -177,7 +177,7 @@ export const IncidentDetail: React.FC = () => {
                                                        DEC-O: {d.decision}
                                                    </span>
                                                    <span className="text-xs text-muted-foreground font-mono opacity-50 mt-0.5">
-                                                       {new Date(d.timestamp).toLocaleTimeString()}
+                                                       {new Date(d.timestamp).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                    </span>
                                                </div>
                                            </div>

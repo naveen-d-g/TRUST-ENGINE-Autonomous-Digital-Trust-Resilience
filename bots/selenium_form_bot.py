@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import argparse
+from selenium.common.exceptions import NoSuchElementException
 
 def run_selenium_bot(url, iterations):
     print(f"Starting Selenium Form Bot targeting {url}")
@@ -58,20 +59,26 @@ def run_selenium_bot(url, iterations):
             # 2. Form Submission Phase on Home Navigation Page
             driver.get(home_url)
             
-            # Find the new data form
-            data_field = driver.find_element(By.NAME, "data_field")
-            save_button = driver.find_element(By.CSS_SELECTOR, "button.submit")
-            
-            # Fill out dummy data
-            data_field.clear()
-            data_field.send_keys(f"automated_scraping_payload_{i}")
-            
-            # Submit form
-            save_button.click()
-            
-            req_time = time.time() - start_time
-            print(f"[{i+1}/{iterations}] Dashboard Form Submitted by {bot_username} in {req_time:.3f}s")
-            success_count += 1
+            try:
+                # Find the new data form
+                data_field = driver.find_element(By.NAME, "data_field")
+                save_button = driver.find_element(By.CSS_SELECTOR, "button.submit")
+                
+                # Fill out dummy data
+                data_field.clear()
+                data_field.send_keys(f"automated_scraping_payload_{i}")
+                
+                # Submit form
+                save_button.click()
+                
+                req_time = time.time() - start_time
+                print(f"[{i+1}/{iterations}] Dashboard Form Submitted by {bot_username} in {req_time:.3f}s")
+                success_count += 1
+            except NoSuchElementException:
+                # If we can't find the field, it's likely we were blocked and redirected
+                current_url = driver.current_url
+                print(f"[{i+1}/{iterations}] Bot blocked! Redirected to: {current_url}")
+                print(f"[{i+1}/{iterations}] The Trust Engine successfully terminated the session.")
             
             # Minimal delay
             time.sleep(0.5)
@@ -87,7 +94,7 @@ def run_selenium_bot(url, iterations):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trust Engine - Target App Selenium Bot")
     parser.add_argument("--url", type=str, default="http://localhost:3001/", help="Target Login URL")
-    parser.add_argument("--count", type=int, default=10, help="Number of login iterations")
+    parser.add_argument("--count", type=int, default=2, help="Number of login iterations")
     args = parser.parse_args()
     
     run_selenium_bot(args.url, args.count)

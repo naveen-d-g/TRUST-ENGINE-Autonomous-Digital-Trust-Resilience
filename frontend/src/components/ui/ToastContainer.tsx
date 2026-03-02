@@ -31,7 +31,7 @@ export const ToastContainer = () => {
                              
                              <div className="flex-1">
                                  <p className="text-sm font-medium text-white">{n.message}</p>
-                                 <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleTimeString()}</p>
+                                 <p className="text-xs text-gray-500 mt-1">{new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
                              </div>
 
                              <button 

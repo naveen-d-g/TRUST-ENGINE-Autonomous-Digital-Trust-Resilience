@@ -61,7 +61,7 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({ incidents })
                                  <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground mt-1">
                                      <span>{incident.incident_id}</span>
                                      <span className="flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> {incident.domain}</span>
-                                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(incident.created_at).toLocaleTimeString()}</span>
+                                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(incident.created_at).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                  </div>
                              </div>
                         </div>
