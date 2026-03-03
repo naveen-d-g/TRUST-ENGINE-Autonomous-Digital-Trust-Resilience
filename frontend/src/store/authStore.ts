@@ -53,6 +53,11 @@ export const useAuthStore = create<AuthState>()(
           }>('/api/auth/login', { username, password });
 
           const { token, user, expiresAt } = response;
+          
+          // Role-Based Access Control
+          if (user.role === 'VIEWER') {
+             throw new Error("Access Denied: VIEWER accounts are restricted to the Target Application environment.");
+          }
 
           // Store token securely
           secureStorage.setItem('auth_token', token);

@@ -8,6 +8,28 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import requests
+
+def provision_genuine_account():
+    """Ensures the Target App genuine account exists in the Trust Engine backend."""
+    genuine_email = "genuine_user@target.local"
+    genuine_password = "genuine_secure"
+    
+    try:
+        # Check if exists by trying to create
+        res = requests.post("http://localhost:5000/api/v1/auth/users", json={
+            "email": genuine_email,
+            "user_id": "genuine_user",
+            "password": genuine_password,
+            "role": "VIEWER"
+        }, timeout=2.0)
+        
+        if res.status_code in [200, 400]:
+            print("Genuine VIEWER account provisioned or already exists.")
+    except Exception as e:
+        print(f"Failed to check/provision genuine account on backend: {e}")
+        
+    return "genuine_user", genuine_password
 
 def simulate_typing(element, text, min_delay=0.05, max_delay=0.2):
     """Simulates human typing with random delays."""
@@ -27,6 +49,8 @@ def run_genuine_user_bot(url, headless=True):
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    genuine_username, genuine_password = provision_genuine_account()
     
     try:
         login_url = url.rstrip('/') + '/login'
@@ -53,11 +77,11 @@ def run_genuine_user_bot(url, headless=True):
         # 2. Typing Credentials (Slowly)
         print("[Scenario 2] Entering credentials at human speed...")
         username_field.clear()
-        simulate_typing(username_field, "demo_user")
+        simulate_typing(username_field, genuine_username)
         time.sleep(random.uniform(0.5, 1.2)) # Pause between fields
         
         password_field.clear()
-        simulate_typing(password_field, "demo_secure")
+        simulate_typing(password_field, genuine_password)
         time.sleep(random.uniform(0.8, 1.5))
         
         # 3. Interacting with Captcha

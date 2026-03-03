@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.auth.rbac import require_role
 from backend.models.user import User
 from backend.extensions import db
+from backend.security.password import hash_password
 import logging
 
 user_bp = Blueprint('user', __name__)
@@ -32,8 +33,13 @@ def create_user():
             return jsonify(error="Conflict", message="User with this ID already exists"), 409
         
         # Create new user
-        new_user = User(user_id=user_id, email=email, role=role)
-        new_user.set_password(password)
+        new_user = User(
+            user_id=user_id,
+            email=email,
+            role=role,
+            platform="SECURITY_PLATFORM",
+            password_hash=hash_password(password)
+        )
         db.session.add(new_user)
         db.session.commit()
         
@@ -99,7 +105,7 @@ def update_user(user_id):
             user.role = data["role"]
         
         if "password" in data:
-            user.set_password(data["password"])
+            user.password_hash = hash_password(data["password"])
         
         db.session.commit()
         

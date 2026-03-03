@@ -8,9 +8,10 @@ from backend.extensions import db
 from backend.audit.audit_logger import AuditLogger
 import uuid
 try:
-    from backend.security.password import hash_password
+    from backend.security.password import hash_password, check_password_hash
 except ImportError:
     def hash_password(pwd): return pwd
+    def check_password_hash(hashed, pwd): return hashed == pwd
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -29,7 +30,7 @@ def login():
     # Real DB Check
     user = User.query.filter((User.email == username) | (User.username == username)).first()
     
-    if not user or not user.check_password(password):
+    if not user or not check_password_hash(user.password_hash, password):
         return error_response("Invalid credentials", 401)
         
     role = user.role.upper()
@@ -40,13 +41,15 @@ def login():
     
     # Audit Login
     # Note: We don't have g.user_id yet if this is the first call, so we use provided username
-    AuditLogger.log(
-        actor=username,
+    AuditLogger.log_action(
+        actor_id=username,
         action="USER_LOGIN",
-        details={"status": "success", "role": role},
-        role=role,
-        platform=platform,
-        req_id=getattr(g, 'req_id', None)
+        payload={
+            "status": "success", 
+            "role": role,
+            "platform": platform,
+            "req_id": getattr(g, 'req_id', "unknown") or "unknown"
+        }
     )
     
     return success_response({
@@ -55,6 +58,7 @@ def login():
         "user_id": username,
         "role": role,
         "platform": platform,
+        "password_reset_required": user.password_reset_required,
         "expires_at": iso_now()
     })
 
@@ -110,19 +114,21 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
     
-    AuditLogger.log(
+    AuditLogger.log_action(
         actor_id=getattr(g, 'user_id', 'system'),
         action="USER_CREATED",
-        details={"target_user_id": user_id, "role": role},
-        role=getattr(g, 'role', 'system'),
-        platform="SECURITY_PLATFORM",
-        req_id=getattr(g, 'req_id', 'unknown')
+        payload={
+            "target_user_id": user_id, 
+            "role": role,
+            "platform": "SECURITY_PLATFORM",
+            "req_id": getattr(g, 'req_id', 'unknown')
+        }
     )
     return success_response(new_user.to_dict())
 
 @auth_bp.route("/users/<user_id>", methods=["PUT"])
 def update_user(user_id):
-    user = User.query.filter_by(user_id=user_id).first()
+    user = User.query.filter((User.user_id == user_id) | (User.email == user_id) | (User.username == user_id)).first()
     if not user:
         return error_response("User not found", 404)
         
@@ -133,6 +139,7 @@ def update_user(user_id):
         user.role = data["role"]
     if data.get("password"):
         user.password_hash = hash_password(data["password"])
+        user.password_reset_required = False
         
     db.session.commit()
     return success_response(user.to_dict())

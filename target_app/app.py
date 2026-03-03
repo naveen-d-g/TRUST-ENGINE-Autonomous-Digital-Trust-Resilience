@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string, flash
 import uuid
 import datetime
 import json
@@ -90,19 +90,44 @@ def login():
         if login_duration_ms < 0:
             login_duration_ms = 120
             
-        # generate a new session id
-        sess_id = str(uuid.uuid4())
-        session["session_id"] = sess_id
-        session["actor_id"] = username
-        session["current_password"] = password # Save current password to session
-        ACTIVE_SESSIONS[sess_id] = "ACTIVE"
+        # Verify with Trust Engine Backend
+        try:
+            auth_response = requests.post(
+                "http://localhost:5000/api/v1/auth/login",
+                json={"username": username, "password": password},
+                timeout=3.0
+            )
+            
+            if auth_response.status_code != 200:
+                flash("Invalid credentials.", "error")
+                return redirect(url_for("login"))
+                
+            auth_data = auth_response.json()
+            is_reset_required = auth_data.get("password_reset_required", False)
+            
+            # generate a new session id
+            sess_id = auth_data.get("session_id", str(uuid.uuid4()))
+            session["session_id"] = sess_id
+            session["actor_id"] = username
+            session["current_password"] = password # Save current password to session
+            ACTIVE_SESSIONS[sess_id] = "ACTIVE"
+            
+            send_event("WEB", "AUTH_LOGIN", sess_id, username, {
+                "status_code": 200,
+                "metrics": {"login_duration_ms": login_duration_ms},
+                "attack_signature": None
+            })
+            
+            if is_reset_required:
+                return redirect(url_for("force_password_reset"))
+                
+            return redirect(url_for("home"))
+            
+        except Exception as e:
+            print(f"Auth Backend Error: {e}")
+            flash("Authentication service unavailable.", "error")
+            return redirect(url_for("login"))
         
-        send_event("WEB", "AUTH_LOGIN", sess_id, username, {
-            "status_code": 200,
-            "metrics": {"login_duration_ms": login_duration_ms},
-            "attack_signature": None
-        })
-        return redirect(url_for("home"))
         
     # GET request
     html = f"""
@@ -127,6 +152,17 @@ def login():
     <div class="card">
         <h2>Target Application</h2>
         <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Login to simulated environment</p>
+        
+        {{% with messages = get_flashed_messages(with_categories=true) %}}
+          {{% if messages %}}
+            {{% for category, message in messages %}}
+              <div style="background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                {{{{ message }}}}
+              </div>
+            {{% endfor %}}
+          {{% endif %}}
+        {{% endwith %}}
+        
         <form method="POST">
             <input type="hidden" name="loaded_time" value="{int(time.time() * 1000)}">
             <input type="text" name="username" value="demo_user" placeholder="Username" required>
@@ -186,25 +222,41 @@ def force_password_reset():
         elif new_password == old_password:
             error_msg = "<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Error: New password cannot be the same as the old password.</div>"
         else:
-            # In a real app, update the DB here.
-            # Clear the terminated session
-            ACTIVE_SESSIONS.pop(sess_id, None)
-            
-            # Create a brand new active session
-            new_sess_id = str(uuid.uuid4())
-            session["session_id"] = new_sess_id
-            session["current_password"] = new_password
-            ACTIVE_SESSIONS[new_sess_id] = "ACTIVE"
-            
-            # Send LOGIN_SUCCESS event to establish new trust baseline
-            send_event("AUTH", "auth", new_sess_id, actor_id, {
-                "status": "success",
-                "auth_method": "password_reset",
-                "risk_score": 0.0,
-                "final_decision": "ALLOW"
-            })
-            
-            return redirect(url_for("home"))
+            try:
+                update_resp = requests.put(
+                    f"http://localhost:5000/api/v1/auth/users/{actor_id}",
+                    json={"password": new_password},
+                    headers={
+                        "X-API-Key": "dev-api-key",
+                        "X-Platform": "SECURITY_PLATFORM",
+                        "X-Role": "SYSTEM"
+                    },
+                    timeout=5.0
+                )
+                if update_resp.status_code != 200:
+                    error_msg = f"<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Backend Error: {update_resp.status_code}</div>"
+                else:
+                    # Successfully updated DB
+                    # Clear the terminated session
+                    ACTIVE_SESSIONS.pop(sess_id, None)
+                    
+                    # Create a brand new active session
+                    new_sess_id = str(uuid.uuid4())
+                    session["session_id"] = new_sess_id
+                    session["current_password"] = new_password
+                    ACTIVE_SESSIONS[new_sess_id] = "ACTIVE"
+                    
+                    # Send LOGIN_SUCCESS event to establish new trust baseline
+                    send_event("AUTH", "auth", new_sess_id, actor_id, {
+                        "status": "success",
+                        "auth_method": "password_reset",
+                        "risk_score": 0.0,
+                        "final_decision": "ALLOW"
+                    })
+                    
+                    return redirect(url_for("home"))
+            except Exception as e:
+                error_msg = f"<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Connection Error: {str(e)}</div>"
         
     html = f"""
     <html>

@@ -6,6 +6,28 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 import argparse
 from selenium.common.exceptions import NoSuchElementException
+import requests
+
+def provision_bot_account():
+    """Ensures the Target App bot account exists in the Trust Engine backend."""
+    bot_email = "automated_bot_user@target.local"
+    bot_password = "bot_secure"
+    
+    try:
+        # Check if exists by trying to create
+        res = requests.post("http://localhost:5000/api/v1/auth/users", json={
+            "email": bot_email,
+            "user_id": "automated_bot_user",
+            "password": bot_password,
+            "role": "VIEWER"
+        }, timeout=2.0)
+        
+        if res.status_code in [200, 400]:
+            print("Bot VIEWER account provisioned or already exists.")
+    except Exception as e:
+        print(f"Failed to check/provision bot account on backend: {e}")
+        
+    return "automated_bot_user", bot_password
 
 def run_selenium_bot(url, iterations):
     print(f"Starting Selenium Form Bot targeting {url}")
@@ -22,6 +44,9 @@ def run_selenium_bot(url, iterations):
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
+    # Provision target account
+    bot_username, bot_password = provision_bot_account()
+    
     success_count = 0
 
     try:
@@ -31,7 +56,6 @@ def run_selenium_bot(url, iterations):
         
         for i in range(iterations):
             start_time = time.time()
-            bot_username = f"selenium_bot_{i}"
             
             # 1. Login Phase
             print(f"[{i+1}/{iterations}] Logging in as {bot_username}...")
@@ -46,7 +70,7 @@ def run_selenium_bot(url, iterations):
             username_field.clear()
             username_field.send_keys(bot_username)
             password_field.clear()
-            password_field.send_keys("automated_password")
+            password_field.send_keys(bot_password)
             
             if not captcha_field.is_selected():
                 driver.execute_script("arguments[0].click();", captcha_field)
