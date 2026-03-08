@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useDashboardStore } from "@/store/dashboardStore"
 import { Card } from "@/components/cards/Card"
-import { Activity, Shield, Users, Zap, AlertTriangle, TrendingUp, TrendingDown, Target } from "lucide-react"
+import { Activity, Shield, Users, Zap, AlertTriangle, TrendingUp, TrendingDown, Target, MousePointer2 } from "lucide-react"
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis
@@ -165,6 +165,48 @@ const DashboardPage = () => {
           </Card>
         ))}
       </div>
+
+      {/* Mouse Bot Detection Section */}
+      <Card className="p-8 bg-gradient-to-r from-blue-600/10 via-transparent to-indigo-600/10 border-white/5 backdrop-blur-3xl rounded-[2.5rem] relative group overflow-hidden border border-white/10 shadow-2xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 blur-[120px] -z-10 group-hover:bg-blue-500/20 transition-all duration-1000" />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-3xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500">
+              <MousePointer2 className="w-8 h-8 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1">Mouse Behavior Bot Detection</h3>
+              <p className="text-gray-400 text-xs font-medium tracking-wide">Real-time XGBoost Behavioral Classification Engine</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-12 items-center">
+            <div className="text-center">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Bot Probability</div>
+              <div className="text-3xl font-black text-emerald-500 tracking-tighter">12.4%</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Movement Entropy</div>
+              <div className="text-3xl font-black text-blue-400 tracking-tighter">2.84</div>
+            </div>
+            <div className="text-center hidden md:block">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Behavior Risk</div>
+              <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-500 uppercase tracking-widest inline-block">Low Risk</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-[1px] bg-white/10 hidden lg:block" />
+            <div className="flex flex-col items-end">
+               <span className="text-[10px] font-black text-white uppercase tracking-widest mb-1 flex items-center gap-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                 Engine Active
+               </span>
+               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Continuous Telemetry</span>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Visual Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

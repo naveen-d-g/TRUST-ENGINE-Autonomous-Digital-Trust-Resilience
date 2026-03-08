@@ -28,7 +28,7 @@ def login():
     print(f"DEBUG LOGIN: Received username='{username}', password='{password}'")
     
     # Real DB Check
-    user = User.query.filter((User.email == username) | (User.username == username)).first()
+    user = User.query.filter((User.email == username) | (User.username == username) | (User.user_id == username)).first()
     
     if not user or not check_password_hash(user.password_hash, password):
         return error_response("Invalid credentials", 401)
@@ -82,9 +82,14 @@ def list_users():
     result = []
     for u in users:
         u_dict = u.to_dict()
-        latest_session = Session.query.filter_by(user_id=u.user_id).order_by(Session.created_at.desc()).first()
+        latest_session = Session.query.filter(
+            (Session.user_id == u.user_id) | 
+            (Session.user_id == u.username) | 
+            (Session.user_id == u.email)
+        ).order_by(Session.created_at.desc()).first()
+        
         if latest_session and latest_session.created_at:
-            u_dict['last_login'] = latest_session.created_at.isoformat()
+            u_dict['last_login'] = latest_session.created_at.isoformat() + 'Z'
         else:
             u_dict['last_login'] = None
         result.append(u_dict)

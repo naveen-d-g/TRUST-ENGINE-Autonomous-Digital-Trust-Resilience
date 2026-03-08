@@ -29,6 +29,7 @@ const UnifiedSocMonitor = () => {
     const { events, isPaused, togglePause, isConnected, error } = useLiveContext();
     const { data: stats } = useLiveStats();
     const [graphData, setGraphData] = useState<any[]>([]);
+    const [displayTrust, setDisplayTrust] = useState(100);
     const [showSafetyMeasures, setShowSafetyMeasures] = useState(false);
     const prevTrustRef = useRef(100);
 
@@ -39,8 +40,16 @@ const UnifiedSocMonitor = () => {
     useEffect(() => {
         if (!stats) return;
         
-        const riskVal = stats.metrics?.global_risk_score || 0;
+        // Find maximum risk in recent events to ensure UI reacts immediately
+        const latestEventRisk = events.length > 0 
+            ? Math.max(...events.slice(-5).map(e => e.risk_score || 0)) 
+            : 0;
+
+        const baseRisk = stats.metrics?.global_risk_score || 0;
+        // Prioritize the live spike if it's higher than the aggregate
+        const riskVal = Math.max(baseRisk, latestEventRisk);
         const trustVal = 100 - riskVal;
+        
         const newPoint = {
             time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             trust: trustVal,
@@ -48,6 +57,7 @@ const UnifiedSocMonitor = () => {
         };
 
         setGraphData(prev => [...prev, newPoint].slice(-30)); // Keep last 30 points
+        setDisplayTrust(trustVal);
 
         const activeIncidents = stats.metrics?.active_incidents || 0;
 
@@ -56,7 +66,7 @@ const UnifiedSocMonitor = () => {
             setShowSafetyMeasures(true);
         }
         prevTrustRef.current = trustVal;
-    }, [stats]);
+    }, [stats, events]);
 
     const handleEnforceReset = async () => {
         setIsResetting(true);
@@ -118,18 +128,18 @@ const UnifiedSocMonitor = () => {
                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">System Trust Score</span>
                     
                     <div className="relative">
-                        <div className={`text-8xl font-black ${(100 - (stats?.metrics?.global_risk_score || 0)) < 50 ? 'text-red-500' : 'text-emerald-500'}`}>
-                            {Math.round(100 - (stats?.metrics?.global_risk_score || 0))}
+                        <div className={`text-8xl font-black ${displayTrust < 50 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            {Math.round(displayTrust)}
                         </div>
                     </div>
                     
                     <div className={`mt-6 px-4 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                        (100 - (stats?.metrics?.global_risk_score || 0)) < 50 
+                        displayTrust < 50 
                         ? 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse' 
                         : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                     }`}>
-                        {(100 - (stats?.metrics?.global_risk_score || 0)) < 50 ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
-                        {(100 - (stats?.metrics?.global_risk_score || 0)) < 50 ? 'Critical Threat Detected' : 'System Stable'}
+                        {displayTrust < 50 ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
+                        {displayTrust < 50 ? 'Critical Threat Detected' : 'System Stable'}
                     </div>
                 </div>
 
@@ -150,7 +160,7 @@ const UnifiedSocMonitor = () => {
                     </div>
                     <div className="flex-1 min-h-[160px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={graphData}>
+                        <AreaChart data={graphData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                                 <defs>
                                     <linearGradient id="colorTrust" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
@@ -162,8 +172,19 @@ const UnifiedSocMonitor = () => {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" vertical={false} />
-                                <XAxis dataKey="time" hide />
-                                <YAxis domain={[0, 100]} hide />
+                                <XAxis 
+                                    dataKey="time" 
+                                    stroke="#4B5563"
+                                    tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                                    style={{ fontSize: '10px' }}
+                                    label={{ value: 'Timeline', position: 'insideBottomRight', offset: -10, fill: '#4B5563', fontSize: 10, fontWeight: 'bold' }}
+                                />
+                                <YAxis 
+                                    domain={[0, 100]} 
+                                    stroke="#4B5563"
+                                    style={{ fontSize: '10px' }}
+                                    label={{ value: 'Risk/Trust %', angle: -90, position: 'insideLeft', fill: '#4B5563', fontSize: 10, fontWeight: 'bold' }}
+                                />
                                 <Tooltip 
                                     contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '12px', fontSize: '10px' }}
                                     itemStyle={{ fontWeight: 'bold' }}
@@ -194,7 +215,7 @@ const UnifiedSocMonitor = () => {
 
             {/* Live Threat Stream Table */}
             <div className="flex-1 bg-black/40 border border-gray-800/60 rounded-3xl overflow-hidden flex flex-col backdrop-blur-sm">
-                <div className="px-8 py-4 bg-gray-900/40 border-b border-gray-800/60 flex justify-between items-center shrink-0">
+                <div className="px-4 md:px-8 py-4 bg-gray-900/40 border-b border-gray-800/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
                     <div className="flex items-center gap-3">
                         <Terminal className="w-4 h-4 text-blue-500" />
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
@@ -234,7 +255,7 @@ const UnifiedSocMonitor = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 overflow-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="sticky top-0 bg-black/80 backdrop-blur-md z-10">
                             <tr className="border-b border-gray-800/40">
@@ -362,9 +383,6 @@ const UnifiedSocMonitor = () => {
                                     className={`w-full py-3 ${isResetting ? 'bg-red-800 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} rounded-xl text-[10px] font-black uppercase tracking-widest transition-all`}
                                 >
                                     {isResetting ? 'ENFORCING...' : 'Enforce Immediate Session Reset'}
-                                </button>
-                                <button className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                                    Enable Adaptive 2FA
                                 </button>
                             </div>
                         </>

@@ -1,3 +1,4 @@
+import React, { useState } from "react"
 import clsx from "clsx"
 
 interface Column<T> {
@@ -12,6 +13,7 @@ interface DataTableProps<T> {
   columns: Column<T>[]
   isLoading?: boolean
   onRowClick?: (item: T) => void
+  renderExpandedRow?: (item: T) => React.ReactNode
 }
 
 export const DataTable = <T extends { id: string | number }>({
@@ -19,7 +21,10 @@ export const DataTable = <T extends { id: string | number }>({
   columns,
   isLoading,
   onRowClick,
+  renderExpandedRow,
 }: DataTableProps<T>) => {
+  const [expandedRowId, setExpandedRowId] = useState<string | number | null>(null)
+
   if (isLoading) {
     return (
       <div className="w-full space-y-4">
@@ -36,6 +41,15 @@ export const DataTable = <T extends { id: string | number }>({
         No data available to display
       </div>
     )
+  }
+
+  const handleRowClick = (item: T) => {
+    if (renderExpandedRow) {
+      setExpandedRowId(expandedRowId === item.id ? null : item.id)
+    }
+    if (onRowClick) {
+      onRowClick(item)
+    }
   }
 
   return (
@@ -58,22 +72,31 @@ export const DataTable = <T extends { id: string | number }>({
         </thead>
         <tbody className="divide-y divide-gray-800">
           {data.map((item) => (
-            <tr
-              key={item.id}
-              onClick={() => onRowClick && onRowClick(item)}
-              className={clsx(
-                "group hover:bg-white/5 transition-colors duration-200",
-                onRowClick && "cursor-pointer"
+            <React.Fragment key={item.id}>
+              <tr
+                onClick={() => handleRowClick(item)}
+                className={clsx(
+                  "group hover:bg-white/5 transition-colors duration-200",
+                  (onRowClick || renderExpandedRow) && "cursor-pointer",
+                  expandedRowId === item.id && "bg-white/[0.03]"
+                )}
+              >
+                {columns.map((col, idx) => (
+                  <td key={idx} className="py-4 px-6 text-sm text-gray-300">
+                    {col.cell
+                      ? col.cell(item)
+                      : (item[col.accessorKey as keyof T] as React.ReactNode)}
+                  </td>
+                ))}
+              </tr>
+              {expandedRowId === item.id && renderExpandedRow && (
+                <tr className="bg-black/20">
+                  <td colSpan={columns.length} className="px-6 py-4">
+                    {renderExpandedRow(item)}
+                  </td>
+                </tr>
               )}
-            >
-              {columns.map((col, idx) => (
-                <td key={idx} className="py-4 px-6 text-sm text-gray-300">
-                  {col.cell
-                    ? col.cell(item)
-                    : (item[col.accessorKey as keyof T] as React.ReactNode)}
-                </td>
-              ))}
-            </tr>
+            </React.Fragment>
           ))}
         </tbody>
       </table>

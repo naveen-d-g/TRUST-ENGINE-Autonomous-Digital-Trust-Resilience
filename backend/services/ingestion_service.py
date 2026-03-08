@@ -130,10 +130,13 @@ class IngestionService:
             features_data = raw_features.pop("features")
             raw_features.update(features_data)
         
+        
+        final_event_type = payload.get("event_type", event_type)
+        
         event = Event(
             session_id=str(session_id),
             actor_id=str(actor_id) if actor_id else None,
-            event_type=event_type,
+            event_type=final_event_type,
             source=source,
             timestamp_epoch=time.time(),
             raw_features=raw_features
@@ -159,6 +162,12 @@ class IngestionService:
                 event.recommendation = raw_features["final_decision"]
             elif "recommendation" in payload:
                 event.recommendation = payload["recommendation"]
+                
+            # Capture simulation 'details' as primary_cause override
+            if "details" in raw_features:
+                event.primary_cause = raw_features["details"]
+            elif "details" in payload:
+                event.primary_cause = payload["details"]
         
         return event
 
@@ -225,6 +234,9 @@ class IngestionService:
         
         if hasattr(triggering_event, 'recommendation') and triggering_event.recommendation:
             inference_payload['force_recommendation'] = triggering_event.recommendation
+            
+        if hasattr(triggering_event, 'primary_cause') and triggering_event.primary_cause:
+            inference_payload['force_primary_cause'] = triggering_event.primary_cause
             
         # 🧪 FORWARD BOT DETECTIONS: Ensure inference pipeline inherits flag
         if triggering_event.raw_features.get("bot_detected"):

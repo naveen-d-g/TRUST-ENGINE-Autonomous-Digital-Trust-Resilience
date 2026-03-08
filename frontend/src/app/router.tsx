@@ -31,6 +31,7 @@ const InfraSecurity = lazy(() => import("@/pages/Domain/InfraSecurity"))
 const DomainOverview = lazy(() => import("@/pages/Domain/DomainOverview"))
 const Audit = lazy(() => import("@/pages/Audit/AuditPage"))
 const BatchPage = lazy(() => import("@/pages/Batch/BatchPage"))
+const AttackSurfacePage = lazy(() => import("@/pages/AttackSurface/AttackSurfacePage"))
 
 
 const FullScreenLoader = () => (
@@ -62,6 +63,7 @@ export const AppRouter = () => {
             <Route path="/live" element={<LiveMonitor />} />
             <Route path="/soc/incidents/:id" element={<IncidentDetails />} />
             <Route path="/batch" element={<BatchPage />} />
+            <Route path="/attack-surface" element={<AttackSurfacePage />} />
             <Route path="/trust-eval" element={<Evaluate />} />
             
             {/* Domain Routes */}

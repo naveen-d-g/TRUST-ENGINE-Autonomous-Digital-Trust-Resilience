@@ -6,7 +6,6 @@ import { AuthProvider } from "@/auth/AuthContext"
 import { AppProvider } from "@/context/AppContext"
 import { ThemeProvider } from "@/context/ThemeContext"
 import { LiveProvider } from "@/context/LiveContext"
-import { TelemetryTracker } from "@/components/system/TelemetryTracker"
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { bootstrapApp } from "@/store/bootstrapStore"
@@ -30,7 +29,6 @@ function App() {
           <ThemeProvider>
             <LiveProvider>
               <BrowserRouter>
-              <TelemetryTracker />
                 <AppRouter />
               </BrowserRouter>
             </LiveProvider>

@@ -117,7 +117,7 @@ const Evaluate = () => {
      const userMap = new Map();
      
      [...liveEvents].reverse()
-     .filter(evt => evt.source === 'TARGET_APP_3001' || evt.raw_features?.source === 'TARGET_APP_3001')
+     .filter(evt => ['TARGET_APP_3001', 'autonomous_enforcement', 'web', 'api_gateway', 'firewall', 'server', 'auth_service'].includes(evt.source || evt.raw_features?.source))
      .forEach(evt => {
         const actualActorId = evt.actor_id || evt.raw_features?.actor_id || 'anonymous';
         const actualSessionId = evt.session_id || evt.raw_features?.session_id || 'unknown';
@@ -139,9 +139,28 @@ const Evaluate = () => {
         if (actualSessionId !== 'unknown' && actualSessionId !== 'anonymous') {
             current.sessions.add(actualSessionId);
         }
+
+        // EXCLUSION: Skip anonymous sessions entirely for the Trust Evaluation view
+        // The user only wants to see identified "online users"
+        if (actualActorId === 'anonymous') {
+            return;
+        }
+
+        // DEFENSIVE: Suppress internal platform noise for anonymous sessions (redundant but kept for structure)
+        if (actualActorId === 'anonymous') {
+            const allowedSources = ['TARGET_APP_3001', 'web'];
+            const source = evt.source || evt.raw_features?.source;
+            const platform = evt.platform || evt.raw_features?.platform;
+            
+            // Only show if it's behavioral telemetry or specifically tagged from Target app
+            if (!allowedSources.includes(source) || platform === 'SECURITY_PLATFORM') {
+                return;
+            }
+        }
+
         current.event_count++;
         current.latest_risk = evt.risk_score || evt.raw_features?.risk_score || evt.raw_features?.payload?.risk_score || current.latest_risk;
-        current.latest_decision = evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision || current.latest_decision;
+        current.latest_decision = evt.recommendation || evt.final_decision || evt.raw_features?.final_decision || evt.raw_features?.payload?.final_decision || current.latest_decision;
         current.last_seen = evt.timestamp_epoch || current.last_seen;
 
         // Aggregating Bot Detection properties
@@ -164,14 +183,24 @@ const Evaluate = () => {
                 }
             }
         }
-        let histAction = evt.raw_features?.path || evt.raw_features?.endpoint || evt.raw_features?.payload?.route || evt.route || 'ACTION';
+        let histAction = evt.raw_features?.details || evt.raw_features?.label || evt.raw_features?.route || evt.raw_features?.path || evt.raw_features?.endpoint || evt.raw_features?.process || evt.raw_features?.payload?.route || evt.route || 'ACTION';
         if (evt.event_type === 'FORM_SUBMIT') histAction = 'Secure Data Entry';
         
+        // Noise Filtering: Skip repetitive background pings/keepalives to keep the UI clean
+        // We check both the extracted action (route) and the event_type to be thorough
+        if (histAction.includes('/api/keepalive') || histAction.includes('/api/ping') || histAction === 'ACTION') {
+            // Only skip 'ACTION' if it's a generic API_CALL with no route (usually background noise)
+            if (evt.event_type === 'API_CALL' || evt.event_type === 'SYSTEM') {
+                return;
+            }
+        }
+
         current.history.push({
             type: evt.event_type || 'UNK',
             action: histAction,
             attack: evt.raw_features?.attack_signature,
             risk: evt.risk_score || evt.raw_features?.risk_score || 0,
+            recommendation: evt.recommendation || evt.raw_features?.recommendation || null,
             time: evt.timestamp_epoch || (Date.now() / 1000),
             session_id: actualSessionId
         });
@@ -269,7 +298,7 @@ const Evaluate = () => {
          <div className="flex gap-8">
             <div className="flex flex-col items-end">
                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Connected Users</span>
-               <span className="text-3xl font-mono font-black text-white">{activeUsers.length > 0 ? activeUsers.length : (liveStats?.active_sessions || 0)}</span>
+               <span className="text-3xl font-mono font-black text-white">{activeUsers.length}</span>
             </div>
             <div className="flex flex-col items-end">
                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Actions Intercepted</span>

@@ -69,6 +69,33 @@ def process_batch_job(app, batch_id, user_id):
                 rec = RecommendationEngine.recommend(decision, features)
                 
                 # D. Persist Session
+                # Determine accurate reasoning for primary_cause
+                if features["attack_signal"] > 0.4:
+                    reasoning = "Security Signal Detected (Automated Ingestion)"
+                    # Try to find a specific keyword find in events
+                    attack_keywords = ["SQL", "BRUTE", "XSS", "SCAN", "EXFIL", "LOGIN_FAILURE", "WAF_BLOCK"]
+                    found_reason = False
+                    for e in events:
+                        e_type = str(e.get("event_type", "")).upper()
+                        e_payload = str(e.get("payload", "")).upper()
+                        combined_text = f"{e_type} {e_payload}"
+                        
+                        if "SQL" in combined_text: reasoning = "SQL Injection Attempt Detected"
+                        elif "BRUTE" in combined_text: reasoning = "Credential Stuffing / Brute Force"
+                        elif "SCAN" in combined_text or "PORT_SCAN" in combined_text: reasoning = "Network Port Scanning"
+                        elif "LOGIN_FAILURE" in combined_text: reasoning = "Brute Force Attempt"
+                        elif "EXFIL" in combined_text or "EXPORT" in combined_text: reasoning = "Data Exfiltration Attempt"
+                        else: continue
+                        
+                        found_reason = True
+                        break
+                elif features["bot_probability"] > 0.6:
+                    reasoning = "High Probability Robotic Activity"
+                elif features["anomaly_score"] > 0.6:
+                    reasoning = "Anomalous IP Behavioral Pattern"
+                else:
+                    reasoning = "Routine Activity (Batch Ingestion)"
+
                 # Using the same Session model as real-time, but with source="BATCH"
                 existing = db.session.get(Session, sid)
                 if not existing:
@@ -78,7 +105,7 @@ def process_batch_job(app, batch_id, user_id):
                         source="BATCH",
                         trust_score=score,
                         final_decision=decision,
-                        primary_cause=events[0]["event_type"],
+                        primary_cause=reasoning, # Now uses intelligent reasoning
                         recommended_action=rec,
                         ip_address=events[0]["ip"],
                         created_at=events[0]["timestamp"]

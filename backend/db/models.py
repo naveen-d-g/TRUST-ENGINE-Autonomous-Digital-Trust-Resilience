@@ -334,3 +334,47 @@ class MonitoringEvent(db.Model):
             "timestamp": self.timestamp.isoformat() + "Z" if self.timestamp else None,
             "payload": self.payload
         }
+
+class AttackSurfaceScan(db.Model):
+    __tablename__ = 'attack_surface_scans'
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    host = db.Column(db.String(255), nullable=False, index=True)
+    port = db.Column(db.Integer, nullable=False, index=True)
+    service = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(50), nullable=True) # open, filtered, closed
+    version = db.Column(db.String(255), nullable=True)
+    risk_level = db.Column(db.String(20), default="LOW") # LOW, MEDIUM, HIGH, CRITICAL
+    scan_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "host": self.host,
+            "port": self.port,
+            "service": self.service,
+            "state": self.state,
+            "version": self.version,
+            "risk_level": self.risk_level,
+            "scan_time": self.scan_time.isoformat() + "Z" if self.scan_time else None
+        }
+
+class AttackPath(db.Model):
+    __tablename__ = 'attack_paths'
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    host = db.Column(db.String(255), nullable=False)
+    source_node = db.Column(db.String(255), nullable=False) # e.g. "Web (3001)"
+    target_node = db.Column(db.String(255), nullable=False) # e.g. "DB Access (5432)"
+    technique = db.Column(db.String(255), nullable=True) # e.g. "SQL Injection"
+    likelihood = db.Column(db.String(20), default="LOW")
+    detected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "host": self.host,
+            "source_node": self.source_node,
+            "target_node": self.target_node,
+            "technique": self.technique,
+            "likelihood": self.likelihood,
+            "detected_at": self.detected_at.isoformat() + "Z" if self.detected_at else None
+        }

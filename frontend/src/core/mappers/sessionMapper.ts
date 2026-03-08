@@ -34,7 +34,7 @@ export function mapSessionDto(dto: SessionDTO): SessionModel {
       source: dto.source || 'PROD',
       primaryCause: dto.primary_cause,
       recommendedAction: dto.recommended_action,
-      label: (dto.decision === 'BLOCK' || dto.decision === 'TERMINATE' || (dto.risk_score ?? 0) > 80) ? 'ESCALATE' :
+      label: (dto.decision === 'BLOCK' || dto.decision === 'TERMINATE' || dto.decision === 'TERMINATED' || (dto.risk_score ?? 0) > 80) ? 'ESCALATE' :
              (dto.decision === 'CHALLENGE' || (dto.risk_score ?? 0) > 50) ? 'RESTRICT' : 'ALLOW',
     };
   } catch (error) {

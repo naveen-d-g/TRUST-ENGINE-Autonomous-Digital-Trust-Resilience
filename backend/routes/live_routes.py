@@ -12,6 +12,14 @@ live_bp = Blueprint('live', __name__)
 
 # ================= INGESTION ENDPOINTS (Push) =================
 
+@live_bp.before_request
+def block_platform_telemetry():
+    """
+    Prevent the management platform from polluting its own monitored state.
+    """
+    if request.path.startswith('/api/v1/live/ingest') and request.headers.get('X-Platform') == 'SECURITY_PLATFORM':
+        return jsonify({"status": "ignored", "reason": "internal_platform_noise"}), 200
+
 @live_bp.route('/ingest/http', methods=['POST'])
 def ingest_http():
     payload = request.json

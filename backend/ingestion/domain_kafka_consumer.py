@@ -62,7 +62,15 @@ class DomainKafkaConsumer:
         self.running = False
 
 def start_domain_consumer():
-    consumer = DomainKafkaConsumer()
-    thread = threading.Thread(target=consumer.start, daemon=True)
-    thread.start()
-    return consumer
+    if os.environ.get('ENABLE_KAFKA', 'false').lower() != 'true':
+        print("[INFO] Kafka Consumer disabled (ENABLE_KAFKA=false)")
+        return None
+        
+    try:
+        consumer = DomainKafkaConsumer()
+        thread = threading.Thread(target=consumer.start, daemon=True)
+        thread.start()
+        return consumer
+    except Exception as e:
+        print(f"[WARN] Failed to initialize Kafka Consumer: {e}")
+        return None

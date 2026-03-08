@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react"
 import { useSessionStore } from "@/store/sessionStore"
-import { DataTable } from "@/components/tables/DataTable"
-import { SessionModel } from "@/types/models"
-import { Badge } from "@/components/badges/Badge"
-import { Search, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { SessionExplorerTable } from "./components/SessionExplorerTable"
+import { Search, RefreshCw, ChevronLeft, ChevronRight, Filter, Zap, Globe, Activity } from "lucide-react"
 
 const SessionExplorerPage = () => {
   const { sessions, loading: isLoading, fetch: fetchSessions } = useSessionStore()
@@ -18,134 +16,133 @@ const SessionExplorerPage = () => {
     return () => clearTimeout(timer)
   }, [search, fetchSessions])
 
-  // Map sessions to have an 'id' field for DataTable compatibility
-  const mappedSessions = (sessions || []).map((s: SessionModel) => ({ ...s, session_id: s.id }))
-
-  const columns = [
-    {
-      header: "Session ID",
-      accessorKey: "session_id" as keyof SessionModel,
-      cell: (item: SessionModel) => (
-        <span className="font-mono text-neonBlue text-xs">{item.id}</span>
-      ),
-    },
-    {
-      header: "User ID",
-      accessorKey: "user_id" as keyof SessionModel,
-      cell: (item: SessionModel) => <span className="font-medium text-white">{item.userId}</span>,
-    },
-    {
-      header: "Risk Score",
-      accessorKey: "risk_score" as keyof SessionModel,
-      cell: (item: SessionModel) => {
-        const trust = 100 - item.riskScore // Assuming riskScore is 0-100 where higher is worse
-        return <span className={`font-bold ${
-            trust > 80 ? "text-neonGreen" : trust > 50 ? "text-neonOrange" : "text-neonRed"
-        }`}>{item.riskScore.toFixed(0)}</span>
-      },
-    },
-    {
-      header: "Label",
-      accessorKey: "label" as keyof SessionModel,
-      cell: (item: SessionModel) => (
-        <Badge variant={
-            item.label === "ESCALATE" ? "danger" : 
-            item.label === "RESTRICT" ? "warning" : "success"
-        }>
-            {item.label}
-        </Badge>
-      )
-    },
-    {
-      header: "Status",
-      accessorKey: "decision" as keyof SessionModel,
-      cell: (item: SessionModel) => {
-        const isTerminated = item.decision === "TERMINATE" || item.decision === "TERMINATED";
-        const isActive = item.isActive;
-        
-        return (
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isTerminated ? 'bg-gray-600' : isActive ? 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-500'}`} />
-              <span className={isTerminated ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : isActive ? "text-neonGreen font-bold uppercase tracking-wider text-[10px]" : "text-gray-400 font-medium uppercase tracking-wider text-[10px]"}>
-                {isTerminated ? "Terminated" : isActive ? "Online" : "Offline"}
-              </span>
-            </div>
-            {isTerminated && item.primaryCause && (
-               <span className="text-[9px] text-gray-500 font-medium mt-1 uppercase tracking-tight truncate max-w-[120px]" title={item.primaryCause}>
-                 {item.primaryCause}
-               </span>
-            )}
-          </div>
-        )
-      }
-    },
-    {
-      header: "Events",
-      accessorKey: "event_count" as keyof SessionModel,
-      cell: (item: SessionModel) => <span className="text-gray-400">{item.anomalyCount || 0}</span>
-    },
-    {
-      header: "Last Seen",
-      accessorKey: "lastSeen" as keyof SessionModel,
-      cell: (item: SessionModel) => (
-        <span className="text-gray-500 text-xs">
-          {item.lastSeen ? item.lastSeen.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}
-        </span>
-      ),
-    },
-  ]
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <h1 className="text-2xl font-bold text-white tracking-wide">Session Explorer</h1>
-           <p className="text-gray-400 text-sm mt-1">Deep packet inspection & risk analysis</p>
-        </div>
-        
-        <div className="flex items-center space-x-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input 
-              type="text" 
-              placeholder="Search user or session..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-bgSecondary border border-gray-700 rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-neonBlue transition-colors"
-            />
+    <div className="relative min-h-screen -mt-8 -mx-8 px-8 py-12 overflow-hidden">
+      {/* Premium Background Elements */}
+      <div className="absolute inset-0 cyber-grid opacity-20 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_50%)] pointer-events-none" />
+      
+      {/* Decorative Orbs */}
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/10 blur-[120px] rounded-full animate-pulse pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full animate-float pointer-events-none" />
+      
+      {/* Scanline Overlay */}
+      <div className="absolute inset-0 scanline opacity-[0.03] pointer-events-none" />
+
+      <div className="relative z-10 space-y-8 max-w-[1600px] mx-auto">
+        {/* Premium Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-2 animate-in slide-in-from-left-4 duration-700">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                <Globe size={20} className="text-primary animate-pulse" />
+              </div>
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic">Intelligence Flux</span>
+            </div>
+            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+              Session Explorer
+            </h1>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-primary animate-ping" />
+              Deep Behavioral Analysis & Neural Risk Mapping
+            </p>
           </div>
-          <button 
-            onClick={() => fetchSessions()}
-            className="p-2 rounded-lg bg-bgList hover:bg-gray-800 text-gray-400 hover:text-white transition-colors border border-gray-700"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-          </button>
+
+          <div className="flex flex-wrap items-center gap-4 animate-in slide-in-from-right-4 duration-700">
+            <div className="glass-card flex items-center gap-2 p-1.5 rounded-2xl glow-border-blue">
+               <div className="p-2 bg-slate-900/50 rounded-xl text-slate-400">
+                 <Filter size={14} />
+               </div>
+               <select 
+                className="bg-transparent border-none py-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer appearance-none min-w-[140px]"
+                onChange={(e) => fetchSessions({ source: e.target.value || undefined })}
+              >
+                <option value="" className="bg-slate-900">Protocol: All</option>
+                <option value="PROD" className="bg-slate-900">Source: Production</option>
+                <option value="BATCH" className="bg-slate-900">Source: Batch Processing</option>
+                <option value="DEMO" className="bg-slate-900">Source: Neural Sim</option>
+              </select>
+            </div>
+
+            <div className="glass-card flex items-center gap-3 px-4 py-1.5 rounded-2xl glow-border-blue flex-1 md:min-w-[300px]">
+              <Search className="w-4 h-4 text-primary animate-pulse" />
+              <input 
+                type="text" 
+                placeholder="INITIALIZE SEARCH SEQUENCE..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-transparent border-none py-2 text-[10px] font-black uppercase tracking-widest text-white placeholder:text-slate-600 focus:outline-none"
+              />
+            </div>
+
+            <button 
+              onClick={() => fetchSessions()}
+              className="p-3.5 rounded-2xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary transition-all hover:scale-105 active:scale-95 shadow-lg group/refresh"
+              title="Resynchronize Streams"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
+            </button>
+          </div>
         </div>
-      </div>
 
-      <DataTable 
-        data={mappedSessions as any} 
-        columns={columns as any} 
-        isLoading={isLoading}
-      />
+        {/* Intelligence Statistics (Implicitly added for premium feel) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-1000 slide-in-from-bottom-4">
+           {[
+             { label: 'Active Streams', value: sessions.length, icon: Activity, color: 'text-primary' },
+             { label: 'Neural Resolution', value: '4.0.8', icon: Zap, color: 'text-warning' },
+             { label: 'Uptime Protocol', value: '99.9%', icon: Globe, color: 'text-success' },
+             { label: 'Buffer State', value: 'Nominal', icon: RefreshCw, color: 'text-info' }
+           ].map((stat, i) => (
+             <div key={i} className="glass-card p-4 rounded-3xl glow-border-blue flex items-center gap-4 transition-all hover:bg-slate-900/40 group/stat">
+               <div className={`p-3 bg-slate-950/50 rounded-2xl border border-white/5 transition-all group-hover/stat:scale-110 ${stat.color}`}>
+                 <stat.icon size={18} />
+               </div>
+               <div>
+                 <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1.5">{stat.label}</p>
+                 <p className="text-base font-black text-white italic uppercase tracking-tighter">{stat.value}</p>
+               </div>
+             </div>
+           ))}
+        </div>
 
-      {/* Pagination Controls */}
-      <div className="flex justify-end items-center gap-4">
-          <button 
-            disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
-            className="p-2 rounded hover:bg-white/5 disabled:opacity-50"
-          >
-              <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm text-gray-400">Page {page}</span>
-          <button 
-             onClick={() => setPage(p => p + 1)}
-             className="p-2 rounded hover:bg-white/5 disabled:opacity-50"
-          >
-              <ChevronRight className="w-4 h-4" />
-          </button>
+        <div className="animate-in fade-in zoom-in-95 duration-1000 delay-200">
+          <SessionExplorerTable 
+            data={sessions || []} 
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Premium Pagination Controls */}
+        <div className="flex justify-between items-center bg-slate-900/40 backdrop-blur-md p-4 rounded-[2rem] border border-white/5 shadow-2xl animate-in slide-in-from-bottom-4 duration-1000">
+          <div className="flex items-center gap-4">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              Matrix Synchronization Page: <span className="text-white italic">{page}</span>
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+              <button 
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                className="p-3 rounded-xl bg-slate-950/50 border border-white/5 hover:border-primary/50 text-slate-500 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
+              >
+                  <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              </button>
+              
+              <div className="px-4 py-2 bg-primary/5 border border-primary/20 rounded-xl">
+                 <span className="text-xs font-black text-primary italic px-2">{page}</span>
+              </div>
+              
+              <button 
+                 onClick={() => setPage(p => p + 1)}
+                 className="p-3 rounded-xl bg-slate-950/50 border border-white/5 hover:border-primary/50 text-slate-500 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
+              >
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+          </div>
+        </div>
       </div>
     </div>
   )

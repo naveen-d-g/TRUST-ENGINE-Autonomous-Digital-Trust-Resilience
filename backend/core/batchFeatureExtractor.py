@@ -31,7 +31,11 @@ class BatchFeatureExtractor:
         
         # 2. Attack Signals
         # Check event types and payloads for common attack vectors
-        attack_keywords = ["CAPTCHA_FAIL", "WAF_BLOCK", "SQL", "XSS", "INJECTION", "EXPLOIT", "ATTACK", "BRUTE", "MALWARE"]
+        attack_keywords = [
+            "CAPTCHA_FAIL", "WAF_BLOCK", "SQL", "XSS", "INJECTION", 
+            "EXPLOIT", "ATTACK", "BRUTE", "MALWARE", "SCAN", "EXFIL", 
+            "CRAWL", "EXPORT", "LIMIT", "RATE"
+        ]
         
         attack_count = 0
         for e in events:

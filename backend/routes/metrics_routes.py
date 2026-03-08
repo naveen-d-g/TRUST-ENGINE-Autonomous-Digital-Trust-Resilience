@@ -21,15 +21,14 @@ def get_summary():
         dist_query = db.session.query(Session.final_decision, func.count(Session.final_decision)).group_by(Session.final_decision).all()
         dist = {res[0]: res[1] for res in dist_query}
         
-        # Get average trust score (15-minute sliding window)
-        # We include TERMINATED sessions in this sliding window to reflect the impact of recent attacks
-        recent_window = datetime.utcnow() - timedelta(minutes=15)
+        # Get average trust score (5-minute sliding window for better reactivity)
+        recent_window = datetime.utcnow() - timedelta(minutes=5)
         avg_trust_val = db.session.query(func.avg(Session.trust_score))\
-            .filter(Session.created_at >= recent_window)\
+            .filter(Session.last_seen >= recent_window)\
             .filter(Session.primary_cause != 'Terminated (System Reset)').scalar()
             
         if avg_trust_val is None:
-            # Fallback to all non-terminated sessions if no recent activity
+            # Fallback to all sessions that haven't been resolved/terminated-out
             avg_trust_val = db.session.query(func.avg(Session.trust_score))\
                 .filter(Session.final_decision != 'TERMINATED').scalar()
         
@@ -94,7 +93,7 @@ def get_summary():
             "risk_history": risk_history,
             "metrics": {
                 "global_risk_score": 100 - float(avg_trust),
-                "active_sessions": Session.query.filter(Session.created_at >= last_24h).count(),
+                "active_sessions": len(SessionStateEngine._sessions),
                 "active_incidents": Incident.query.filter(Incident.status == 'OPEN').count(),
                 "risk_velocity": round(random.uniform(-0.5, 0.5), 2) if 'random' in locals() else 0.1,
                 "allow_count": allow_count,

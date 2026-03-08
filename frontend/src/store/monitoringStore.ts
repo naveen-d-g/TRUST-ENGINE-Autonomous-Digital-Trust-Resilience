@@ -12,6 +12,7 @@ export interface MonitoringEvent {
   suggestion?: string;
   payload?: any;
   type?: string;
+  source?: string;
 }
 
 interface DomainState {
@@ -22,7 +23,7 @@ interface DomainState {
     riskAvg: number;
     suspicious: number;
   };
-  trend: { time: string; value: number }[];
+  trend: { time: number; value: number }[];
 }
 
 interface MonitoringStore {
@@ -70,7 +71,7 @@ export const useMonitoringStore = create<MonitoringStore>((set) => ({
 
     // Update Trend (Rolling 60 points window)
     const currentTrend = currentDomain.trend || [];
-    const newTrend = [...currentTrend, { time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), value: safeRiskScore }];
+    const newTrend = [...currentTrend, { time: Date.now(), value: safeRiskScore }];
     if (newTrend.length > 60) newTrend.shift();
 
     // Update Events (Keep last 50)

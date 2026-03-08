@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { UserRole } from '../../types/auth';
 
-const Header = () => {
+const Header = ({ isCollapsed }) => {
 
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const navigate = useNavigate();
@@ -27,10 +27,10 @@ const Header = () => {
     { label: 'Notification Logic', icon: Bell, action: () => alert('Notification Settings - Coming Soon') },
   ];
   return (
-    <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-10 px-8 flex items-center justify-between ml-64 transition-colors">
-      <div className="flex items-center gap-4 text-muted-foreground">
-        <Command className="w-4 h-4" />
-        <span className="text-xs font-medium uppercase tracking-widest">Digital Trust Dashboard</span>
+    <header className={`h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-10 px-4 md:px-8 flex items-center justify-between ml-0 transition-all duration-300 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <div className="flex items-center gap-2 md:gap-4 text-muted-foreground overflow-hidden">
+        <Command className="w-4 h-4 flex-shrink-0" />
+        <span className="text-xs font-medium uppercase tracking-widest truncate">Digital Trust Dashboard</span>
       </div>
 
       <div className="flex items-center gap-3">

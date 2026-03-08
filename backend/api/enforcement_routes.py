@@ -164,6 +164,13 @@ def terminate_user(user_id):
             
         terminated_count += 1
 
+    from backend.db.models import User
+    user_record = User.query.filter_by(username=user_id).first() or \
+                  User.query.filter_by(user_id=user_id).first()
+    
+    if user_record:
+        user_record.password_reset_required = True
+
     db.session.commit()
     
     AuditLogger.log_action(

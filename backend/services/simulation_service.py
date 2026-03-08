@@ -42,7 +42,9 @@ class SimulationService:
         db.session.add(sim_session)
         db.session.commit()
         
-        return sim_session.to_dict()
+        res = sim_session.to_dict()
+        res["demo_session_id"] = sim_id # Legacy compat for LiveLoginDemo.jsx
+        return res
 
     @staticmethod
     def record_event(session_id, event_type, metadata=None, recommended_action=None):
@@ -149,7 +151,7 @@ class SimulationService:
             session.risk_score = 100.0 - new_trust
             
             # Derive decision from new score
-            if new_trust < 30: activity_decision = "BLOCK"
+            if new_trust < 30: activity_decision = "RESTRICT"
             elif new_trust < 60: activity_decision = "CHALLENGE"
             else: activity_decision = "ALLOW"
             
@@ -176,12 +178,26 @@ class SimulationService:
             
             return {
                 "event": new_event.to_dict(),
-                "analysis": analysis_result
+                "analysis": analysis_result.to_dict(),
+                "decision": session.final_decision,
+                "requires_captcha": session.final_decision == "CHALLENGE"
             }
         except Exception as e:
             import traceback
             traceback.print_exc()
             raise e
+
+    @staticmethod
+    def end_simulation(session_id):
+        session = Session.query.filter_by(session_id=session_id).first()
+        if not session:
+            return {"error": "Session not found"}
+        
+        return {
+            "final_decision": session.final_decision,
+            "trust_score": session.trust_score,
+            "message": f"Simulation session {session_id} finalized with decision: {session.final_decision}"
+        }
 
     @staticmethod
     def get_simulation_history(session_id, requestor_id, requestor_role):

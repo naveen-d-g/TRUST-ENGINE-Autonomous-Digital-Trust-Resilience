@@ -11,7 +11,7 @@ BASE_URL = "http://127.0.0.1:5000/api/v1/live/ingest"
 HEADERS = {
     "Content-Type": "application/json",
     "X-API-Key": "dev-api-key",
-    "X-Platform": "SECURITY_PLATFORM",
+    "X-Platform": "USER_PLATFORM",
     "X-Role": "ADMIN"
 }
 

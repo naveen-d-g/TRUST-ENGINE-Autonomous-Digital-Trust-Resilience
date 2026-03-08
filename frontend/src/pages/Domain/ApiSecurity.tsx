@@ -86,15 +86,15 @@ const ApiSecurityPage = () => {
                     <XAxis 
                         dataKey="time" 
                         stroke="#9CA3AF" 
-                        tick={{fontSize: 12}}
-                        tickFormatter={(time) => time.split(' ')[0]}
+                        tick={{fontSize: 10}}
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                         interval={9}
-                        label={{ value: 'Time (HH:MM:SS)', position: 'insideBottomRight', offset: -5, fill: '#9CA3AF', fontSize: 12 }}
+                        label={{ value: 'Timeline (HH:MM:SS)', position: 'insideBottomRight', offset: -10, fill: '#9CA3AF', fontSize: 10, fontWeight: 'bold' }}
                     />
                     <YAxis 
                         stroke="#9CA3AF" 
-                        tick={{fontSize: 12}} 
-                        label={{ value: 'Risk Score (0-100)', angle: -90, position: 'insideLeft', fill: '#9CA3AF', fontSize: 12, style: { textAnchor: 'middle' } }}
+                        tick={{fontSize: 10}} 
+                        label={{ value: 'Risk Score (0-100)', angle: -90, position: 'insideLeft', fill: '#9CA3AF', fontSize: 10, fontWeight: 'bold', style: { textAnchor: 'middle' } }}
                     />
                     <Tooltip 
                         contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.5rem' }}

@@ -26,15 +26,19 @@ export const TrustLineChart = ({
 }: TrustLineChartProps) => {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data}>
+      <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
         <XAxis 
           dataKey="time" 
           stroke={colors.neonBlue} 
-          tickFormatter={(time) => new Date(time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} 
-          style={{ fontSize: '12px' }}
+          tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} 
+          style={{ fontSize: '10px' }}
+          label={{ value: 'Timeline', position: 'insideBottomRight', offset: -10, fill: colors.neonBlue, fontSize: 10, fontWeight: 'bold', opacity: 0.8 }}
         />
-        <YAxis stroke="#94a3b8" />
+        <YAxis 
+          stroke="#94a3b8" 
+          label={{ value: 'Score %', angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 10, fontWeight: 'bold', opacity: 0.8 }}
+        />
         <Tooltip 
           contentStyle={{ backgroundColor: colors.bgCard, borderColor: '#334155', color: '#fff' }}
           itemStyle={{ color: color }}

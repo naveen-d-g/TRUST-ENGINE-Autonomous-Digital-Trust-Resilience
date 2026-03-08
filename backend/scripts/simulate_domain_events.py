@@ -75,7 +75,7 @@ def simulate():
                         headers = {
                             "Content-Type": "application/json",
                             "X-API-Key": "dev-api-key",
-                            "X-Platform": "SECURITY_PLATFORM",
+                            "X-Platform": "USER_PLATFORM",
                             "X-Role": "ADMIN"
                         }
                         resp = requests.post(BASE_URL, json=event, headers=headers)

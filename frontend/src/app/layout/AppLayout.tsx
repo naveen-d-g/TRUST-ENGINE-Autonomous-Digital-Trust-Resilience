@@ -197,11 +197,12 @@ const NotificationSidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
 export const AppLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#05080D] text-gray-100 flex overflow-hidden w-screen">
-      <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
+      <Sidebar isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
+      <div className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
         <Topbar onToggleNotifications={() => setIsSidebarOpen(true)} />
         <main className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
           <div className="max-w-7xl mx-auto">

@@ -13,6 +13,7 @@ It focuses on building continuous digital trust through:
 - 🛡 **Adaptive Prevention**: Automatically enforcing session termination, MFA triggers, or quarantines.
 - 🔄 **Automated Recovery**: Rolling back risky sessions and assisting in rapid incident resilience.
 - 🔐 **Secure Authentication & Access Control**
+- 🌐 **Attack Surface Mapping**: Continuous network exposure enumeration and attack path inference.
 
 ---
 
@@ -36,7 +37,8 @@ It focuses on building continuous digital trust through:
 
 - Dynamic access control
 - Policy-based enforcement
-- Bot Activity Detection & Mitigation
+- Bot Activity Detection & Mitigation (Logic + XGBoost)
+- Mouse Behavior Analysis (Velocity, Acceleration, Entropy)
 - Step-up authentication triggers
 - Suspicious activity blocking
 
@@ -73,8 +75,8 @@ Acts as the sensory organ of the platform. It ingests HTTP events, API calls, an
 This layer analyzes aggregated session data. Using supervised and unsupervised models, it:
 
 - Generates a **Risk Score (0-100)** and a **Trust Score**.
-- Identifies **Bot Activity** (via speed, headless execution, or repetitive heuristics).
-- Classifies the severity of the threat and predicts the primary cause.
+- Identifies **Bot Activity** (via speed, headless execution, or repetitive mouse behavior heuristics).
+- Classifies the severity of the threat and predicts the primary cause using **Random Forest** and **XGBoost** models.
 
 ### 4. The Orchestration & Enforcement Layer (`backend/api/enforcement_routes.py`)
 
@@ -88,6 +90,7 @@ A high-fidelity React dashboard tailored for SOC Analysts. Features include:
 - **Threat Heatmap**: Graphical overview of system stability.
 - **Session Explorer**: Drill-down analysis into individual actor trajectories.
 - **Live Attack Monitor**: Streaming logs of intercepts and verdicts.
+- **Active Attack Surface**: Continuous network exposure mapping and intelligent bidirectional path inference using Nmap.
 
 ## 🏗 System Architecture Flow
 
@@ -180,6 +183,7 @@ Scalable cloud-ready architecture
 - **Python 3.10+**
 - **Node.js (v18+) & npm**
 - **PostgreSQL (14+)**
+- **Nmap**: The Nmap binary must be installed on your host system to enable the Attack Surface Engine.
 
 ### 1. Clone the Repository
 
@@ -271,9 +275,10 @@ python bots/api_bot.py --count 10
 
 _Effect:_ The engine identifies the missing JavaScript fingerprints and non-standard generic User-Agents, blocking the session at the root layer.
 
-### 3. Manual Verification
+Navigate to the Target App (`http://localhost:3001`). Login genuinely as `demo_user`. Unlike the bot, human typing and interaction duration will safely pass the ML threshold, marking you as `Online` and `ALLOW`ed in the SOC dashboard.
 
-Navigate to the Target App (`http://localhost:3001`). Login genuinely as `demo_user`. Unlike the bot, human typing and interaction duration will safely pass the ML threshold, marking you as `Online` and `ALLOW`ed in the SOC dashboard. Click "Simulate Attack" inside the Target App's dashboard to observe forced Session Terminations gracefully enforce password resets.
+**Simulate Behavioral Bot Interaction:**
+Click **"Simulate Bot Interaction"** inside the Target App's dashboard. The Trust Engine will detect the non-human mouse pathing, autonomously trigger a termination signal back to the app, and instantly redirect you to the **"Account Compromised"** password reset page for quarantine.
 
 ---
 

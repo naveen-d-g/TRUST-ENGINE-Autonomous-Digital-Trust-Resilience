@@ -11,21 +11,34 @@ class IncidentManager:
         - If open incident exists → attach
         - Else create new incident
         """
+        tenant_id = signal.get("tenant_id") or "default"
+        risk_score = signal.get("risk_score", 0)
+        
+        # Determine Severity
+        severity = IncidentSeverity.MEDIUM
+        if risk_score >= 90: severity = IncidentSeverity.CRITICAL
+        elif risk_score >= 70: severity = IncidentSeverity.HIGH
+
         # Find open incident (mock logic for now as simplified in prompt)
         incident = Incident.query.filter(
             Incident.status == IncidentStatus.OPEN,
-            Incident.tenant_id == signal.get("tenant_id")
+            Incident.tenant_id == tenant_id
         ).first()
 
         if not incident:
             incident = Incident(
-                tenant_id=signal.get("tenant_id"),
+                tenant_id=tenant_id,
                 status=IncidentStatus.OPEN,
-                severity=IncidentSeverity.MEDIUM # Baseline
+                severity=severity
             )
             db.session.add(incident)
             db.session.commit()
-            print(f"[OK] Created new Incident: {incident.id}")
+            print(f"[OK] Created new Incident: {incident.incident_id}")
+        else:
+            # Optionally upgrade severity if new signal is higher
+            if severity == IncidentSeverity.CRITICAL and incident.severity != IncidentSeverity.CRITICAL:
+                incident.severity = IncidentSeverity.CRITICAL
+                db.session.commit()
         
     @staticmethod
     def transition_state(incident_id, new_status):

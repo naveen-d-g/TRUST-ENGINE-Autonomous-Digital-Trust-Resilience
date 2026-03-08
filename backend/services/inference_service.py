@@ -1,3 +1,4 @@
+from flask import current_app
 from backend.ml.inference_pipeline import evaluate_single_session
 from backend.extensions import db
 from backend.db.models import Session
@@ -6,6 +7,7 @@ from datetime import datetime
 
 from backend.services.observation_service import SessionStateEngine
 from backend.audit.audit_log import AuditLogger
+from backend.incidents.incident_manager import IncidentManager
 import json
 
 class InferenceService:
@@ -29,15 +31,23 @@ class InferenceService:
         
         # 🧪 SIMULATION: Apply forced risk score if present
         force_risk = request_data.get("force_risk_score")
+        force_primary = request_data.get("force_primary_cause")
+        
         if force_risk is not None:
              result.risk_score = float(force_risk)
              # Infer decision from forced score
-             if result.risk_score >= 90: result.decision = "TERMINATED"
-             elif result.risk_score >= 50: result.decision = "ESCALATE"
-             else: result.decision = "ALLOW"
+             if result.risk_score >= 90: 
+                 result.decision = "TERMINATED"
+             elif result.risk_score >= 50: 
+                 result.decision = "ESCALATE"
+             else: 
+                 result.decision = "ALLOW"
              
-             # Add to explanation
-             result.explanation["primary_cause"] = "Simulated Attack (Forced Risk)"
+             # Override Primary Cause
+             if force_primary:
+                 result.explanation["primary_cause"] = force_primary
+             else:
+                 result.explanation["primary_cause"] = "Simulated Attack (Forced Risk)"
              
              # 🧪 Distribute forced risk to domains for better dashboard visuals
              if "metrics" in result.metadata:
@@ -69,8 +79,8 @@ class InferenceService:
                          for key, entry in playbooks.items():
                              # Match if key is in rec text (e.g. "Ransomware" in "EMERGENCY: Ransomware...")
                              if key in force_rec:
-                                 matched_entry = entry
-                                 break
+                                  matched_entry = entry
+                                  break
                      
                      if matched_entry:
                          result.explanation["reasoning"] = matched_entry.get("reasoning")
@@ -79,8 +89,6 @@ class InferenceService:
 
              except Exception as e:
                  print(f"Playbook lookup failed: {e}")
-             
-
 
         bot_detected = features.get("bot_detected", False)
         bot_reason = features.get("bot_reason", "")
@@ -125,26 +133,80 @@ class InferenceService:
             
             if existing_session:
                 # Update Existing
-                existing_session.trust_score = 100.0 - result.risk_score # approximate trust
-                existing_session.final_decision = result.decision
-                existing_session.primary_cause = result.explanation.get("primary_cause", "Unknown")
-                existing_session.recommended_action = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor"
+                existing_session.last_seen = datetime.utcnow()
+                
+                # Monotonic Risk: Don't allow trust to 'recover' from heartbeats if it hit a critical low
+                new_trust = 100.0 - result.risk_score
+                if existing_session.trust_score is not None:
+                    existing_session.trust_score = min(existing_session.trust_score, new_trust)
+                else:
+                    existing_session.trust_score = new_trust
+                    
+                # Monotonic Decision: Once terminated/escalated, don't downgrade to allow/monitor
+                severity_map = {"TERMINATED": 4, "TERMINATE": 4, "BLOCK": 4, "ESCALATE": 3, "RESTRICT": 2, "MONITOR": 1, "ALLOW": 0}
+                current_severity = severity_map.get(existing_session.final_decision, 0)
+                new_severity = severity_map.get(result.decision, 0)
+                
+                with open("inference_debug.log", "a") as f:
+                    f.write(f"[{datetime.utcnow()}] Session {session_id}: Current {existing_session.final_decision}({current_severity}), New {result.decision}({new_severity})\n")
+                
+                if new_severity >= current_severity:
+                    existing_session.final_decision = result.decision
+                    # Also update primary cause if the new event is more severe or provides better detail
+                    # IGNORE generic or simulation baseline labels if we already have a specific attack label
+                    new_cause = result.explanation.get("primary_cause")
+                    generic_causes = [
+                        "Routine Activity", "Unknown", "baseline traffic", "Idle System", 
+                        "Baseline Traffic", "Normal Page Visit", "Login Page Load", 
+                        "Successful Login", "Authenticated Dashboard Activity", 
+                        "Standard API Calls", "Unusual Outbound Packet"
+                    ]
+                    if new_cause and new_cause not in generic_causes:
+                        existing_session.primary_cause = new_cause
+                else:
+                    with open("inference_debug.log", "a") as f:
+                        f.write(f"[{datetime.utcnow()}] Monotonic Guard: Keeping {existing_session.final_decision} over {result.decision}\n")
+                
+                # Check for recovery advice override from simulation
+                # Refine Monotonic Recommendation: Don't let generic "No specific recovery..." overwrite specific steps
+                rec_action = existing_session.recommended_action or "monitor"
+                if request_data.get("force_recommendation"):
+                    rec_action = request_data.get("force_recommendation")
+                elif result.explanation.get("recovery_advice"):
+                    rec_candidate = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor")
+                    # Only upgrade if candidate is not the generic ML default
+                    generic_defaults = [
+                        "monitor", 
+                        "Continue monitoring for pattern evolution.",
+                        "No specific recovery action needed. Monitor situation."
+                    ]
+                    if rec_candidate not in generic_defaults:
+                        rec_action = rec_candidate
+                
+                existing_session.recommended_action = rec_action
                 existing_session.session_duration_sec = int(features.get("session_duration_sec", 0))
                 existing_session.risk_reasons = risk_reasons_json
                 if bot_detected:
                     existing_session.bot_detected = True
                     existing_session.bot_reason = bot_reason
-                # Don't overwrite created_at or user_id (unless we want to update user binding)
-                if user_id: existing_session.user_id = user_id
+                # Don't overwrite created_at or user_id with anonymous/none if we already have a real identity
+                if user_id and user_id != "anonymous": 
+                    existing_session.user_id = user_id
             else:
                 # Create New
+                rec_action = "monitor"
+                if request_data.get("force_recommendation"):
+                    rec_action = request_data.get("force_recommendation")
+                elif result.explanation.get("recovery_advice"):
+                    rec_action = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor")
+
                 new_session = Session(
                     session_id=session_id,
                     user_id=user_id,
                     trust_score=100.0 - result.risk_score,
                     final_decision=result.decision,
                     primary_cause=result.explanation.get("primary_cause", "Unknown"),
-                    recommended_action=result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor",
+                    recommended_action=rec_action,
                     ip_address=features.get("ip_address", "0.0.0.0"),
                     session_duration_sec=int(features.get("session_duration_sec", 0)),
                     risk_reasons=risk_reasons_json,
@@ -153,8 +215,8 @@ class InferenceService:
                 )
                 db.session.add(new_session)
 
-            # Terminate and force password reset if bot detected
-            if bot_detected and user_id:
+            # Terminate and force password reset if bot detected or risk is critical
+            if (bot_detected or result.decision in ["TERMINATE", "TERMINATED", "BLOCK"]) and user_id:
                 from backend.db.models import User
                 user_record = User.query.filter_by(username=user_id).first()
                 if not user_record:
@@ -190,21 +252,45 @@ class InferenceService:
 
             # Create Audit Log
             # 5. Persistent Audit (Unified Audit Logger)
-            audit_logger = AuditLogger()
-            audit_logger.append({
-                "action": "SESSION_EVALUATION",
-                "incident_id": session_id,
-                "actor": user_id or "SYSTEM",
-                "role": "ANALYST", # Default for evaluation logs
-                "details": {
+            from backend.audit.audit_logger import AuditLogger
+            AuditLogger.log_action(
+                actor_id=user_id or "SYSTEM",
+                action="SESSION_EVALUATION",
+                target_id=session_id,
+                payload={
+                    "role": "ANALYST", # Default for evaluation logs
                     "decision": result.decision,
                     "primary_cause": result.explanation.get("primary_cause"),
                     "risk_score": result.risk_score,
                     "trust_score": 100.0 - result.risk_score
                 }
-            })
+            )
 
             db.session.commit()
+
+            # 🧪 AUTO-TRIGGER INCIDENTS: If risk is critical, create/attach to incident
+            # This ensures the SOC dashboard popup triggers correctly
+            if result.risk_score >= 90:
+                try:
+                    import threading
+                    # Get the underlying app object to pass into the thread safely
+                    app = current_app._get_current_object()
+                    
+                    def trigger_inc(app_context_obj):
+                        with app_context_obj.app_context():
+                            try:
+                                IncidentManager.correlate({
+                                    "tenant_id": features.get("tenant_id", "default"),
+                                    "risk_score": result.risk_score,
+                                    "session_id": session_id,
+                                    "actor_id": user_id
+                                })
+                            except Exception as e:
+                                print(f"[Thread Error] Incident correlation failed: {e}")
+                    
+                    threading.Thread(target=trigger_inc, args=(app,), daemon=True).start()
+                except Exception as inc_err:
+                    print(f"Failed to offload incident trigger: {inc_err}")
         except Exception as e:
             db.session.rollback()
             # We log the error but return the result to the user so the service isn't blocked by DB issues
@@ -215,7 +301,14 @@ class InferenceService:
         formatted_result["trust_score"] = 100.0 - result.risk_score
         formatted_result["final_decision"] = result.decision
         formatted_result["primary_cause"] = result.explanation.get("primary_cause", "Unknown")
-        formatted_result["recommended_action"] = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor") if result.explanation.get("recovery_advice") else "monitor"
+        
+        rec_action = "monitor"
+        if request_data.get("force_recommendation"):
+            rec_action = request_data.get("force_recommendation")
+        elif result.explanation.get("recovery_advice"):
+            rec_action = result.explanation.get("recovery_advice", [{}])[0].get("action", "monitor")
+        
+        formatted_result["recommended_action"] = rec_action
         
         if bot_detected:
             formatted_result["bot_detected"] = True

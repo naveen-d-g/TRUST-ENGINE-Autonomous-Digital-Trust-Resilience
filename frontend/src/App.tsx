@@ -26,6 +26,7 @@ const SimulationLab = React.lazy(() => import('./pages/SimulationLab.jsx'));
 const Evaluate = React.lazy(() => import('./pages/Evaluate.jsx'));
 const BatchAudit = React.lazy(() => import('./pages/Batch/BatchPage'));
 const LiveView = React.lazy(() => import('./pages/LiveView.jsx'));
+const AttackSurfacePage = React.lazy(() => import('./pages/AttackSurface/AttackSurfacePage'));
 
 
 import { AuthProvider } from './auth/AuthContext';
@@ -114,6 +115,9 @@ const App: React.FC = () => {
                     
                     <Route path="/soc/batch" element={
                         <Suspense fallback={<PageLoader />}><BatchAudit /></Suspense>
+                    } />
+                    <Route path="/attack-surface" element={
+                        <Suspense fallback={<PageLoader />}><AttackSurfacePage /></Suspense>
                     } />
                     <Route path="/live" element={
                         <Suspense fallback={<PageLoader />}><LiveView /></Suspense>

@@ -18,6 +18,7 @@ class Event:
     raw_features: Dict[str, Any] = field(default_factory=dict)
     derived_features: Dict[str, Any] = field(default_factory=dict)
     risk_score: Optional[float] = None # For Simulation/Overrides
+    primary_cause: Optional[str] = None # For Simulation Reasoning Overrides
     recommendation: Optional[str] = None # For Simulation "Action Required" box
 
     def to_dict(self) -> Dict[str, Any]:

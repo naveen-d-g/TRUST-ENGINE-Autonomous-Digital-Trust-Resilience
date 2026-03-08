@@ -27,7 +27,7 @@ const AttackSimulationPage = () => {
     const handleEvent = (data: any) => {
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
             type: "SIMULATION_EVENT",
             message: data.message || JSON.stringify(data),
             variant: "warning"
@@ -54,7 +54,7 @@ const AttackSimulationPage = () => {
     setIsRunning(true)
     setEvents(prev => [...prev, {
         id: Date.now().toString(),
-        time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
         type: "ATTACK_VECTOR",
         message: `Injecting ${label} sequence...`,
         variant: "danger"
@@ -91,7 +91,7 @@ const AttackSimulationPage = () => {
         
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
             type: "SUCCESS",
             message: `Attack ${label} initiated successfully - Trust Score: ${response.trust_score}`,
             variant: "success"
@@ -101,7 +101,7 @@ const AttackSimulationPage = () => {
         const errorMsg = err.response?.data?.message || err.message || "Network Communication Error";
         setEvents(prev => [...prev, {
             id: Date.now().toString(),
-            time: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
             type: "ERROR",
             message: `Dispatch Failed: ${errorMsg}`,
             variant: "danger"
@@ -124,14 +124,14 @@ const AttackSimulationPage = () => {
 
   const [scoreHistory, setScoreHistory] = useState(
       Array.from({ length: 30 }, (_, i) => ({
-          time: new Date(Date.now() - (30 - i) * 1000).toISOString(),
+          time: Date.now() - (30 - i) * 1000,
           score: 100
       }))
   )
 
   useEffect(() => {
       setScoreHistory(prev => {
-          const newHistory = [...prev, { time: new Date().toISOString(), score: internalScore }]
+          const newHistory = [...prev, { time: Date.now(), score: internalScore }]
           return newHistory.length > 30 ? newHistory.slice(newHistory.length - 30) : newHistory
       })
   }, [internalScore])
@@ -222,23 +222,10 @@ const AttackSimulationPage = () => {
                 </div>
               </div>
             </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center -mt-6 relative z-10">
-               <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] mb-4 opacity-60">Trust Score</span>
-               <div className={`text-9xl font-black tracking-tighter transition-all duration-700 drop-shadow-[0_0_30px_rgba(var(--neon-color),0.4)] ${
-                  internalScore >= 60 ? "text-neonGreen [--neon-color:16,185,129]" : internalScore >= 30 ? "text-neonOrange [--neon-color:245,158,11]" : "text-neonRed [--neon-color:239,68,68]"
-               }`}>
-                  {Math.round(internalScore)}
-               </div>
-            </div>
             
-            <div className="w-full h-64 mt-4 relative z-10">
-               <TrustLineChart data={scoreHistory} height={250} color={internalScore >= 60 ? "#10b981" : internalScore >= 30 ? "#f59e0b" : "#ef4444"} />
-            </div>
-
-            {/* Insight Panel Match */}
+            {/* Insight Panel Match - Re-positioned to top for prominence */}
             {(riskCause || recommendation) && (
-              <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-gray-800/50 relative z-10">
+              <div className="grid grid-cols-2 gap-8 mb-8 pb-6 border-b border-gray-800/50 relative z-10 transition-all animate-in fade-in slide-in-from-top-4 duration-500">
                 <div>
                   <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] block mb-3 opacity-80">Primary Risk Cause</span>
                   <p className="text-sm text-neonRed font-black leading-tight uppercase tracking-tight drop-shadow-lg">{riskCause}</p>
@@ -252,6 +239,19 @@ const AttackSimulationPage = () => {
                 </div>
               </div>
             )}
+
+            <div className="flex-1 flex flex-col items-center justify-center -mt-6 relative z-10">
+               <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] mb-4 opacity-60">Trust Score</span>
+               <div className={`text-9xl font-black tracking-tighter transition-all duration-700 drop-shadow-[0_0_30px_rgba(var(--neon-color),0.4)] ${
+                  internalScore >= 60 ? "text-neonGreen [--neon-color:16,185,129]" : internalScore >= 30 ? "text-neonOrange [--neon-color:245,158,11]" : "text-neonRed [--neon-color:239,68,68]"
+               }`}>
+                  {Math.round(internalScore)}
+               </div>
+            </div>
+            
+            <div className="w-full h-64 mt-4 relative z-10">
+               <TrustLineChart data={scoreHistory} height={250} color={internalScore >= 60 ? "#10b981" : internalScore >= 30 ? "#f59e0b" : "#ef4444"} />
+            </div>
 
             {/* Background design elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../auth/AuthContext';
@@ -9,6 +9,7 @@ import { Outlet } from 'react-router-dom';
 
 const Layout = () => {
   const { isLoading, isAuthenticated } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (isLoading && isAuthenticated) {
     return (
@@ -20,10 +21,10 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Sidebar />
-      <Header />
-      <main className="ml-64 p-8 fade-in">
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:block">
+      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+      <Header isCollapsed={isCollapsed} />
+      <main className={`p-4 md:p-8 fade-in flex-1 transition-all duration-300 ml-0 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>

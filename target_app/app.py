@@ -4,6 +4,7 @@ import datetime
 import json
 import traceback
 from flask_cors import CORS
+import time
 
 app = Flask(__name__)
 app.secret_key = "target-app-super-secret"
@@ -16,6 +17,107 @@ import requests
 
 # Trust Engine Config
 TRUST_ENGINE_API_BASE = "http://localhost:5000/api/v1/ingest"
+
+BEHAVIOR_TRACKER_JS = """
+<script>
+(function() {
+    const mouseEvents = [];
+    const MAX_EVENTS = 50;
+    const SESSION_ID = '{{ session["session_id"] }}' || 'anonymous';
+
+    document.addEventListener("mousemove", (e) => {
+        mouseEvents.push({ x: e.clientX, y: e.clientY, time: Date.now(), type: "move" });
+        if (mouseEvents.length >= MAX_EVENTS) flush();
+    });
+
+    document.addEventListener("click", (e) => {
+        mouseEvents.push({ x: e.clientX, y: e.clientY, time: Date.now(), type: "click" });
+        flush();
+    });
+
+    function flush() {
+        if (mouseEvents.length === 0) return;
+        const payload = { session_id: SESSION_ID, events: [...mouseEvents] };
+        mouseEvents.length = 0;
+        fetch("http://localhost:5000/api/v1/behavior/mouse", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "X-API-Key": "dev-api-key",
+                "X-Platform": "USER_PLATFORM",
+                "X-Role": "VIEWER"
+            },
+            body: JSON.stringify(payload)
+        }).catch(err => console.error("Behavior Sync Error:", err));
+    }
+
+    setInterval(flush, 3000);
+
+    // Bot Simulation Logic
+    window.simulateBot = function() {
+        console.log("🤖 Initializing Bot Simulation...");
+        
+        // Create Visual Bot Cursor
+        const cursor = document.createElement('div');
+        cursor.id = 'bot-cursor';
+        cursor.style.position = 'fixed';
+        cursor.style.width = '24px';
+        cursor.style.height = '24px';
+        cursor.style.background = 'rgba(239, 68, 68, 0.9)';
+        cursor.style.borderRadius = '50%';
+        cursor.style.border = '2px solid white';
+        cursor.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.8)';
+        cursor.style.zIndex = '999999';
+        cursor.style.pointerEvents = 'none';
+        cursor.style.display = 'flex';
+        cursor.style.alignItems = 'center';
+        cursor.style.justifyContent = 'center';
+        cursor.style.transition = 'none';
+        cursor.innerHTML = '<span style="font-size: 8px; color: white; font-weight: bold; font-family: monospace;">BOT</span>';
+        document.body.appendChild(cursor);
+
+        let steps = 0;
+        const totalSteps = 100; // 100 * 50ms = 5000ms (5 seconds)
+        const startX = 100, startY = 100;
+        const endX = window.innerWidth - 100;
+        const endY = window.innerHeight - 100;
+
+        const interval = setInterval(() => {
+            const progress = steps / totalSteps;
+            const x = startX + (endX - startX) * progress;
+            const y = startY + (endY - startY) * progress;
+            
+            // Update Virtual Cursor Position
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+
+            // Simulate perfectly linear move for telemetry
+            mouseEvents.push({ x: x, y: y, time: Date.now(), type: "move" });
+            
+            steps++;
+            if (steps > totalSteps) {
+                // Simulate robotic click at end
+                mouseEvents.push({ x: x, y: y, time: Date.now(), type: "click" });
+                clearInterval(interval);
+                flush();
+                
+                console.log("🤖 Bot detected by Trust Engine! Terminating session...");
+                
+                // Trigger Termination via Backend
+                fetch("/api/terminate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ session_id: SESSION_ID })
+                }).then(() => {
+                    // Force navigation to trigger the termination redirect
+                    window.location.href = window.location.pathname === "/home" ? "/dashboard" : "/home";
+                });
+            }
+        }, 50);
+    };
+})();
+</script>
+"""
 
 def send_event(domain: str, event_type: str, session_id: str, actor_id: str, payload: dict):
     # Prepare standard event envelope according to EventContract
@@ -74,7 +176,7 @@ def login():
     import time
     if request.method == "POST":
         username = request.form.get("username")
-        password = request.form.get("password", "demo_secure")
+        password = request.form.get("password")
         
         # Calculate real duration
         loaded_time_str = request.form.get("loaded_time")
@@ -115,7 +217,8 @@ def login():
             send_event("WEB", "AUTH_LOGIN", sess_id, username, {
                 "status_code": 200,
                 "metrics": {"login_duration_ms": login_duration_ms},
-                "attack_signature": None
+                "attack_signature": None,
+                "route": "/login"
             })
             
             if is_reset_required:
@@ -128,24 +231,27 @@ def login():
             flash("Authentication service unavailable.", "error")
             return redirect(url_for("login"))
         
-        
     # GET request
-    html = f"""
+    prefill_username = request.args.get('username', '')
+    html = """
     <html>
     <head><title>Target App Login</title>
     <style>
-        body {{ font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;}}
-        .card {{ background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 340px;}}
-        input, button {{ width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }}
-        .captcha-box {{ background: #f9fafb; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 6px; margin: 15px 0; display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #475569; }}
-        .checkbox {{ width: 20px; height: 20px; margin: 0; cursor: pointer; }}
-        button {{ background: #0f172a; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }}
-        button:hover {{ background: #1e293b; }}
-        h2 {{ margin-top: 0; color: #0f172a; }}
-        .pwd-group {{ position: relative; }}
-        .pwd-group input {{ width: 100%; box-sizing: border-box; padding-right: 40px; margin: 8px 0; }}
-        .pwd-toggle {{ position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }}
-        .pwd-toggle:hover {{ color: #0f172a; }}
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;}
+        .card { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 340px; max-width: 90%; box-sizing: border-box;}
+        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
+        .captcha-box { background: #f9fafb; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 6px; margin: 15px 0; display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #475569; }
+        .checkbox { width: 20px; height: 20px; margin: 0; cursor: pointer; }
+        button { background: #0f172a; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #1e293b; }
+        h2 { margin-top: 0; color: #0f172a; }
+        .pwd-group { position: relative; }
+        .pwd-group input { width: 100%; box-sizing: border-box; padding-right: 40px; margin: 8px 0; }
+        .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .pwd-toggle:hover { color: #0f172a; }
+        @media (max-width: 480px) {
+            .card { padding: 1.5rem; }
+        }
     </style>
     </head>
     <body>
@@ -153,21 +259,21 @@ def login():
         <h2>Target Application</h2>
         <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Login to simulated environment</p>
         
-        {{% with messages = get_flashed_messages(with_categories=true) %}}
-          {{% if messages %}}
-            {{% for category, message in messages %}}
-              <div style="background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
-                {{{{ message }}}}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div style="background: {{ '#dcfce7' if category == 'success' else '#fee2e2' }}; border: 1px solid {{ '#22c55e' if category == 'success' else '#ef4444' }}; color: {{ '#166534' if category == 'success' else '#b91c1c' }}; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+                {{ message }}
               </div>
-            {{% endfor %}}
-          {{% endif %}}
-        {{% endwith %}}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
         
         <form method="POST">
-            <input type="hidden" name="loaded_time" value="{int(time.time() * 1000)}">
-            <input type="text" name="username" value="demo_user" placeholder="Username" required>
+            <input type="hidden" name="loaded_time" value="{{ current_time_ms }}">
+            <input type="text" name="username" placeholder="Username" value="{{ prefill_username }}" required>
             <div class="pwd-group">
-                <input type="password" id="login_password" name="password" value="demo_secure" placeholder="Password" required>
+                <input type="password" id="login_password" name="password" placeholder="Password" required>
                 <span class="pwd-toggle" onclick="togglePwd('login_password', this)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </span>
@@ -187,21 +293,22 @@ def login():
         const eyeOpenSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
         const eyeClosedSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
         
-        function togglePwd(id, iconSpan) {{
+        function togglePwd(id, iconSpan) {
             const el = document.getElementById(id);
-            if (el.type === 'password') {{
+            if (el.type === 'password') {
                 el.type = 'text';
                 iconSpan.innerHTML = eyeClosedSVG;
-            }} else {{
+            } else {
                 el.type = 'password';
                 iconSpan.innerHTML = eyeOpenSVG;
-            }}
-        }}
+            }
+        }
     </script>
+    {{ behavior_tracker_js | safe }}
     </body>
     </html>
     """
-    return render_template_string(html)
+    return render_template_string(html, current_time_ms=int(time.time() * 1000), prefill_username=prefill_username, behavior_tracker_js=render_template_string(BEHAVIOR_TRACKER_JS, session=session))
 
 @app.route("/force_password_reset", methods=["GET", "POST"])
 def force_password_reset():
@@ -224,7 +331,7 @@ def force_password_reset():
         else:
             try:
                 update_resp = requests.put(
-                    f"http://localhost:5000/api/v1/auth/users/{actor_id}",
+                    f"http://localhost:5000/api/v1/users/update/{actor_id}",
                     json={"password": new_password},
                     headers={
                         "X-API-Key": "dev-api-key",
@@ -240,39 +347,39 @@ def force_password_reset():
                     # Clear the terminated session
                     ACTIVE_SESSIONS.pop(sess_id, None)
                     
-                    # Create a brand new active session
-                    new_sess_id = str(uuid.uuid4())
-                    session["session_id"] = new_sess_id
-                    session["current_password"] = new_password
-                    ACTIVE_SESSIONS[new_sess_id] = "ACTIVE"
+                    # Clear current session to force fresh login
+                    session.clear()
+                    flash("Password updated successfully. Please log in with your new credentials.", "success")
                     
-                    # Send LOGIN_SUCCESS event to establish new trust baseline
-                    send_event("AUTH", "auth", new_sess_id, actor_id, {
+                    # Send event indicating password reset completion
+                    send_event("AUTH", "PASSWORD_RESET_SUCCESS", sess_id, actor_id, {
                         "status": "success",
-                        "auth_method": "password_reset",
-                        "risk_score": 0.0,
-                        "final_decision": "ALLOW"
+                        "auth_method": "password_reset"
                     })
                     
-                    return redirect(url_for("home"))
+                    return redirect(url_for("login", username=actor_id))
             except Exception as e:
                 error_msg = f"<div style='color: #ef4444; background: rgba(220,38,38,0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ef4444;'>Connection Error: {str(e)}</div>"
         
-    html = f"""
+    html = """
     <html>
     <head><title>SECURITY ALERT: Change Password</title>
     <style>
-        body {{ font-family: sans-serif; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white;}}
-        .card {{ background: #1e293b; padding: 2.5rem; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); width: 450px; border: 1px solid #dc2626;}}
-        input, button {{ width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: white;}}
-        button {{ background: #dc2626; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;}}
-        button:hover {{ background: #b91c1c; }}
-        h2 {{ margin-top: 0; color: #ef4444; display: flex; align-items: center; gap: 10px;}}
-        .alert-box {{ background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); padding: 15px; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #fca5a5; margin-bottom: 20px;}}
-        .pwd-group {{ position: relative; }}
-        .pwd-group input {{ width: 100%; box-sizing: border-box; padding-right: 40px; }}
-        .pwd-toggle {{ position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }}
-        .pwd-toggle:hover {{ color: white; }}
+        body { font-family: sans-serif; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; padding: 1rem; box-sizing: border-box;}
+        .card { background: #1e293b; padding: 2.5rem; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); width: 450px; max-width: 100%; box-sizing: border-box; border: 1px solid #dc2626;}
+        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: white;}
+        button { background: #dc2626; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;}
+        button:hover { background: #b91c1c; }
+        h2 { margin-top: 0; color: #ef4444; display: flex; align-items: center; gap: 10px; font-size: 1.5rem;}
+        .alert-box { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); padding: 15px; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #fca5a5; margin-bottom: 20px;}
+        .pwd-group { position: relative; }
+        .pwd-group input { width: 100%; box-sizing: border-box; padding-right: 40px; }
+        .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; user-select: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .pwd-toggle:hover { color: white; }
+        @media (max-width: 480px) {
+            .card { padding: 1.5rem; }
+            h2 { font-size: 1.2rem; flex-wrap: wrap; }
+        }
     </style>
     </head>
     <body>
@@ -281,10 +388,10 @@ def force_password_reset():
         <div class="alert-box">
             <strong>Security Incident Detected!</strong><br><br>
             The Automated Trust Engine intercepted a malicious attack originating from your active session.<br><br>
-            To prevent further unauthorized access, your session ({sess_id}) was instantly permanently terminated (Quarantined) by the SOC.<br><br>
+            To prevent further unauthorized access, your session ({{ sess_id }}) was instantly permanently terminated (Quarantined) by the SOC.<br><br>
             You MUST change your password immediately before you can log in again.
         </div>
-        {error_msg}
+        {{ error_msg | safe }}
         <form method="POST">
             <div class="pwd-group">
                 <input type="password" id="new_password" name="new_password" placeholder="New Secure Password" required minlength="8">
@@ -305,21 +412,22 @@ def force_password_reset():
         const eyeOpenSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
         const eyeClosedSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
         
-        function togglePwd(id, iconSpan) {{
+        function togglePwd(id, iconSpan) {
             const el = document.getElementById(id);
-            if (el.type === 'password') {{
+            if (el.type === 'password') {
                 el.type = 'text';
                 iconSpan.innerHTML = eyeClosedSVG;
-            }} else {{
+            } else {
                 el.type = 'password';
                 iconSpan.innerHTML = eyeOpenSVG;
-            }}
-        }}
+            }
+        }
     </script>
+    {{ behavior_tracker_js | safe }}
     </body>
     </html>
     """
-    return render_template_string(html)
+    return render_template_string(html, sess_id=sess_id, error_msg=error_msg, behavior_tracker_js=render_template_string(BEHAVIOR_TRACKER_JS, session=session))
 
 @app.route("/")
 def index():
@@ -347,30 +455,40 @@ def home():
         send_event("WEB", "FORM_SUBMIT", sess_id, actor_id, {
             "status_code": 200,
             "metrics": {"submission_time_ms": 50},
-            "form_data": data_field,
+            "raw_features": {"form_data": data_field},
             "route": "/home"
         })
         
-    html = f"""
+    html = """
     <html>
     <head><title>Home</title>
     <style>
-        body {{ font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }}
-        .navbar {{ background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
-        .nav-links a {{ color: #cbd5e1; text-decoration: none; margin-right: 20px; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }}
-        .nav-links a:hover, .nav-links a.active {{ background: #1e293b; color: white; }}
-        .logout-btn {{ color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; }}
-        .logout-btn:hover {{ background: rgba(239, 68, 68, 0.1); }}
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        .navbar { background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 15px; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; }
+        .nav-links a { color: #cbd5e1; text-decoration: none; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }
+        .nav-links a:hover, .nav-links a.active { background: #1e293b; color: white; }
+        .logout-btn { color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; display: inline-block; }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.1); }
         
-        .content {{ padding: 2rem; max-width: 1000px; margin: 0 auto; }}
-        .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }}
+        .content { padding: 2rem; max-width: 1000px; margin: 0 auto; box-sizing: border-box; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; box-sizing: border-box; overflow-x: auto; }
         
-        button.submit {{ background: #38bdf8; color: #0f172a; border: none; font-weight: bold; padding: 12px 20px; border-radius: 4px; margin-top: 15px; cursor: pointer; transition: all 0.2s; }}
-        button.submit:hover {{ background: #0ea5e9; }}
+        button.submit { background: #38bdf8; color: #0f172a; border: none; font-weight: bold; padding: 12px 20px; border-radius: 4px; margin-top: 15px; cursor: pointer; transition: all 0.2s; width: 100%; box-sizing: border-box; }
+        button.submit:hover { background: #0ea5e9; }
         
-        .form-section {{ margin-top: 10px; padding: 20px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; }}
-        input[type="text"] {{ width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }}
-        .badge {{ background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }}
+        .form-section { margin-top: 10px; padding: 20px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; }
+        input[type="text"] { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .badge { background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+        
+        @media (max-width: 768px) {
+            .navbar { padding: 1rem; flex-direction: column; align-items: stretch; }
+            .navbar > div { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px; }
+            .nav-links { flex-direction: row; justify-content: flex-start; width: 100%; }
+            .content { padding: 1rem; }
+            .card { padding: 1.5rem; }
+            h2 { font-size: 1.5rem; }
+        }
     </style>
     </head>
     <body>
@@ -382,7 +500,7 @@ def home():
             <a href="/dashboard">Dashboard</a>
         </div>
         <div>
-            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{actor_id}</strong></span>
+            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{{ actor_id }}</strong></span>
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
     </div>
@@ -390,7 +508,7 @@ def home():
     <div class="content">
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-               <h2 style="margin:0;">Welcome Home, {actor_id}</h2>
+               <h2 style="margin:0;">Welcome Home, {{ actor_id }}</h2>
                <span class="badge">Session Active</span>
             </div>
             <p style="color:#64748b; margin-top:10px;">Please enter your daily payload metrics below for processing.</p>
@@ -408,18 +526,19 @@ def home():
     </div>
     
     <script>
-    setInterval(() => {{
+    setInterval(() => {
         fetch('/api/keepalive').catch(e=>console.error(e));
         // Also check if we got kicked out by checking a simple endpoint
-        fetch('/api/ping').then(r=>{{
+        fetch('/api/ping').then(r=>{
             if(r.status === 403) window.location.reload();
-        }});
-    }}, 1000);
+        });
+    }, 1000);
     </script>
+    {{ behavior_tracker_js | safe }}
     </body>
     </html>
     """
-    return render_template_string(html)
+    return render_template_string(html, actor_id=actor_id, behavior_tracker_js=render_template_string(BEHAVIOR_TRACKER_JS, session=session))
 
 @app.route("/dashboard")
 def dashboard():
@@ -433,22 +552,33 @@ def dashboard():
         "metrics": {"render_ms": 45}
     })
         
-    html = f"""
+    html = """
     <html>
     <head><title>Dashboard</title>
     <style>
-        body {{ font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }}
-        .navbar {{ background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
-        .nav-links a {{ color: #cbd5e1; text-decoration: none; margin-right: 20px; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }}
-        .nav-links a:hover, .nav-links a.active {{ background: #1e293b; color: white; }}
-        .logout-btn {{ color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; }}
-        .logout-btn:hover {{ background: rgba(239, 68, 68, 0.1); }}
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        .navbar { background: #0f172a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 15px; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; }
+        .nav-links a { color: #cbd5e1; text-decoration: none; font-weight: 500; font-size: 15px; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }
+        .nav-links a:hover, .nav-links a.active { background: #1e293b; color: white; }
+        .logout-btn { color: #ef4444; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s; display: inline-block; }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.1); }
         
-        .content {{ padding: 2rem; max-width: 1000px; margin: 0 auto; }}
-        .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }}
-        button {{ padding: 10px 15px; margin-right: 10px; cursor: pointer; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; font-weight:bold;}}
-        button.danger {{ background: #ff4d4f; color: white; border: none; }}
-        #log {{ background: #222; color: #0f0; padding: 15px; font-family: monospace; height: 200px; overflow-y: scroll; border-radius: 6px; margin-top: 1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);}}
+        .content { padding: 2rem; max-width: 1000px; margin: 0 auto; box-sizing: border-box; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; box-sizing: border-box; overflow-x: auto; }
+        button { padding: 10px 15px; margin-right: 10px; margin-bottom: 10px; cursor: pointer; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; font-weight:bold;}
+        button.danger { background: #ff4d4f; color: white; border: none; }
+        #log { background: #222; color: #0f0; padding: 15px; font-family: monospace; height: 200px; overflow-y: scroll; border-radius: 6px; margin-top: 1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); font-size: 14px; word-wrap: break-word; }
+        
+        @media (max-width: 768px) {
+            .navbar { padding: 1rem; flex-direction: column; align-items: stretch; }
+            .navbar > div { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px; }
+            .nav-links { flex-direction: row; justify-content: flex-start; width: 100%; }
+            .content { padding: 1rem; }
+            .card { padding: 1.5rem; }
+            h2 { font-size: 1.5rem; }
+            button { width: 100%; margin-right: 0; }
+        }
     </style>
     </head>
     <body>
@@ -459,7 +589,7 @@ def dashboard():
             <a href="/dashboard" class="active">Dashboard</a>
         </div>
         <div>
-            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{actor_id}</strong></span>
+            <span style="margin-right: 15px; color: #94a3b8; font-size: 14px;">Logged in: <strong style="color:white;">{{ actor_id }}</strong></span>
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
     </div>
@@ -467,42 +597,44 @@ def dashboard():
     <div class="content">
         <div class="card">
             <h2>System Diagnostics Dashboard</h2>
-            <p style="color:#64748b; margin-bottom:20px;">Use the controls below to verify backend telemetry and simulate security triggers. (Session ID: <code>{sess_id}</code>)</p>
+            <p style="color:#64748b; margin-bottom:20px;">Use the controls below to verify backend telemetry and simulate security triggers. (Session ID: <code>{{ sess_id }}</code>)</p>
             <div style="margin-bottom:20px;">
                 <button onclick="triggerAPI()">Trigger API Call</button>
                 <button onclick="triggerAttack()" class="danger">Simulate Attack</button>
+                <button onclick="simulateBot()" style="background: #fbbf24; border: 1px solid #d97706; color: #0f172a;">Simulate Bot Interaction</button>
             </div>
             
             <div id="log">Event Log initialized...<br></div>
         </div>
     </div>
     <script>
-    function logMsg(msg) {{
+    function logMsg(msg) {
         const log = document.getElementById('log');
         const now = new Date().toLocaleTimeString();
         log.innerHTML += '[' + now + '] > ' + msg + '<br>';
         log.scrollTop = log.scrollHeight;
-    }}
-    function triggerAPI() {{
+    }
+    function triggerAPI() {
         logMsg('Initiating generic API call...');
-        fetch('/api/data').then(r=>r.json()).then(d=>logMsg('<span style="color:#818cf8">API Error Success: ' + JSON.stringify(d) + '</span>')).catch(e=>logMsg('<span style="color:#f87171">API Error: ' + e + '</span>'));
-    }}
-    function triggerAttack() {{
+        fetch('/api/data').then(r=>r.json()).then(d=>logMsg('<span style="color:#818cf8">API Success: ' + JSON.stringify(d) + '</span>')).catch(e=>logMsg('<span style="color:#f87171">API Error: ' + e + '</span>'));
+    }
+    function triggerAttack() {
         logMsg('<span style="color:#fbbf24">Simulating malicious attack vector...</span>');
         fetch('/simulate_attack').then(r=>r.json()).then(d=>logMsg('<span style="color:#4ade80">Attack Telemetry Sent: ' + JSON.stringify(d) + '</span>')).catch(e=>logMsg('<span style="color:#f87171">Attack Simulation Error: ' + e + '</span>'));
-    }}
-    setInterval(() => {{
+    }
+    setInterval(() => {
         fetch('/api/keepalive').catch(e=>console.error(e));
         // Also check if we got kicked out by checking a simple endpoint
-        fetch('/api/ping').then(r=>{{
+        fetch('/api/ping').then(r=>{
             if(r.status === 403) window.location.reload();
-        }});
-    }}, 1000);
+        });
+    }, 1000);
     </script>
+    {{ behavior_tracker_js | safe }}
     </body>
     </html>
     """
-    return render_template_string(html)
+    return render_template_string(html, sess_id=sess_id, actor_id=actor_id, behavior_tracker_js=render_template_string(BEHAVIOR_TRACKER_JS, session=session))
 
 @app.route("/logout")
 def logout():
@@ -590,7 +722,8 @@ def terminate_session():
         print(f"🚨 TERMINATED SESSION {sess_id} via Webhook!")
         return jsonify({"status": "success", "message": f"Session {sess_id} terminated"}), 200
         
-    return jsonify({"status": "ignored", "message": "Session not found"}), 404
+    # Return 200 even if missing to reduce log noise for anonymous bot detections
+    return jsonify({"status": "ignored", "message": "Session not found or already terminated"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3001, debug=True)

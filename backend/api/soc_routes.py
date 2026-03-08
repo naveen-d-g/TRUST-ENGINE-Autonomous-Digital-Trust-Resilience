@@ -101,14 +101,21 @@ def list_audit_logs():
 @bp.route("/sessions/<session_id>/terminate", methods=["POST"])
 @require_access(role=Role.ANALYST)
 def terminate_session(session_id):
-    from backend.db.models import Session
+    from backend.db.models import Session, User, db
     session = Session.query.filter_by(session_id=session_id).first()
     if not session:
         return jsonify({"error": "Session not found"}), 404
         
     session.final_decision = "TERMINATE"
     session.trust_score = 0
-    from backend.db.models import db
+    
+    # Force password reset for the terminated user
+    if session.user_id:
+        user_record = User.query.filter_by(username=session.user_id).first() or \
+                      User.query.filter_by(user_id=session.user_id).first()
+        if user_record:
+            user_record.password_reset_required = True
+
     db.session.commit()
     
     AuditService.log(
@@ -147,7 +154,9 @@ def reset_simulation():
     terminated_sids = []
     for session in malicious_sessions:
         session.final_decision = "TERMINATED"
-        session.primary_cause = "Terminated (System Reset)"
+        # Protect existing attack labels - be extremely conservative
+        if not session.primary_cause or session.primary_cause in ["Routine Activity", "Unknown", None, ""]:
+            session.primary_cause = "Terminated (System Reset)"
         terminated_sids.append(session.session_id)
             
     db.session.commit()
@@ -176,7 +185,7 @@ def reset_simulation():
                 
     for sid in to_remove:
         if sid in SessionStateEngine._sessions:
-             del SessionStateEngine._sessions[sid]
+             SessionStateEngine.mark_terminated(sid)
              
     # 4. Clear global history to prevent graph artifacts
     SessionStateEngine._global_history.clear()

@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.auth.rbac import require_role
 from backend.models.user import User
 from backend.extensions import db
@@ -53,8 +52,22 @@ def create_user():
 @require_role('ADMIN')
 def list_users():
     try:
+        from backend.db.models import Session
         users = User.query.all()
-        return jsonify([user.to_dict() for user in users]), 200
+        result = []
+        for user in users:
+            u_dict = user.to_dict()
+            latest_session = Session.query.filter(
+                (Session.user_id == user.user_id) | 
+                (Session.user_id == user.username) | 
+                (Session.user_id == user.email)
+            ).order_by(Session.created_at.desc()).first()
+            
+            if latest_session and latest_session.created_at:
+                u_dict['last_login'] = latest_session.created_at.isoformat() + 'Z'
+                
+            result.append(u_dict)
+        return jsonify(result), 200
     except Exception as e:
         logging.error(f"User List Failure: {e}")
         return jsonify(error="Internal Server Error", message=str(e)), 500
@@ -67,25 +80,34 @@ def delete_user(user_id):
         if not user:
             return jsonify(error="Not Found", message="User not found"), 404
         
-        # Prevent deleting yourself
-        current_user_id = get_jwt_identity()
-        if user_id == current_user_id:
+        # Prevent deleting yourself using the header provided by the frontend if available
+        current_user_id = request.headers.get("X-User-ID")
+        if current_user_id and user_id == current_user_id:
             return jsonify(error="Forbidden", message="Cannot delete your own account"), 403
         
+        try:
+            from flask_jwt_extended import verify_jwt_in_request
+            verify_jwt_in_request(optional=True)
+        except:
+            pass
+
         db.session.delete(user)
         db.session.commit()
         
         return jsonify(message="User deleted successfully"), 200
     except Exception as e:
         db.session.rollback()
-        logging.error(f"User Deletion Failure: {e}")
+        logging.error("User Deletion Failure:", exc_info=True)
         return jsonify(error="Internal Server Error", message=str(e)), 500
 
-@user_bp.route("/update/<user_id>", methods=["PUT"])
-@require_role('ADMIN')
-def update_user(user_id):
+@user_bp.route("/update/<user_identifier>", methods=["PUT"])
+@require_role(['ADMIN', 'SYSTEM'])
+def update_user(user_identifier):
     try:
-        user = db.session.get(User, user_id)
+        user = db.session.get(User, user_identifier)
+        if not user:
+            user = User.query.filter((User.username == user_identifier) | (User.email == user_identifier)).first()
+            
         if not user:
             return jsonify(error="Not Found", message="User not found"), 404
         
@@ -95,7 +117,7 @@ def update_user(user_id):
         if "email" in data:
             # Check if email is already taken by another user
             existing = User.query.filter_by(email=data["email"]).first()
-            if existing and existing.user_id != user_id:
+            if existing and existing.user_id != user.user_id:
                 return jsonify(error="Conflict", message="Email already in use"), 409
             user.email = data["email"]
         
@@ -106,6 +128,7 @@ def update_user(user_id):
         
         if "password" in data:
             user.password_hash = hash_password(data["password"])
+            user.password_reset_required = False
         
         db.session.commit()
         

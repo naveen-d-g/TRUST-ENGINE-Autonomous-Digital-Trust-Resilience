@@ -95,6 +95,9 @@ def create_app(config_class=Config):
     from backend.api.enforcement_routes import enforcement_bp
     from backend.routes.trust_routes import trust_bp
     from backend.routes.user_routes import user_bp
+    from backend.api.behavior_routes import behavior_bp
+    from backend.attack_surface.routes import attack_surface_bp
+    from backend.api.tenant_routes import tenant_bp
     
     app.register_blueprint(soc_bp, url_prefix="/api/v1/soc")
     app.register_blueprint(batch_bp, url_prefix="/api/v1/batch")
@@ -110,6 +113,9 @@ def create_app(config_class=Config):
     app.register_blueprint(enforcement_bp, url_prefix="/api/v1/enforcement")
     app.register_blueprint(trust_bp, url_prefix="/api/v1/trust")
     app.register_blueprint(user_bp, url_prefix="/api/v1/users")
+    app.register_blueprint(attack_surface_bp, url_prefix="/api/v1/attack-surface")
+    app.register_blueprint(behavior_bp, url_prefix="/api/v1/behavior")
+    app.register_blueprint(tenant_bp, url_prefix="/api")
     
     # 💥 DOMAIN KAFKA CONSUMER
     try:

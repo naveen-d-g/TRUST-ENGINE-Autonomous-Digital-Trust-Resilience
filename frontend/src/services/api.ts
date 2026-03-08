@@ -266,3 +266,10 @@ export const userService = {
 export const socService = {
   getAuditLogs: () => api.get<any>('/api/v1/soc/audit')
 };
+
+export const demoService = {
+  startDemo: () => api.post<any>('/api/v1/simulate/start'),
+  recordEvent: (simId: string, eventType: string, metadata: any = {}) => 
+    api.post<any>('/api/v1/simulate/event', { simulation_id: simId, event_type: eventType, features: metadata }),
+  endDemo: (simId: string) => api.post<any>('/api/v1/simulate/end', { simulation_id: simId }),
+};

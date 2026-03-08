@@ -17,12 +17,15 @@ class TrustDecisionEngine:
         
         score = max(0, (1 - penalty) * 100)
         
-        # Decision Mapping
+        # Decision Mapping - Aligned with Real-time Pipeline
         if score > 80:
             decision = "ALLOW"
-        elif score > 50:
-            decision = "ESCALATE"
-        else:
+        elif score > 60:
+            decision = "MONITOR"
+        elif score > 40:
             decision = "RESTRICT"
+        else:
+            # Critical risk - Terminate
+            decision = "TERMINATED"
             
         return round(score, 1), decision

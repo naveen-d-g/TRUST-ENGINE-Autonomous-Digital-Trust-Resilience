@@ -16,6 +16,7 @@ class Role(str, Enum):
     VIEWER = "VIEWER"
     ANALYST = "ANALYST"
     ADMIN = "ADMIN"
+    SYSTEM = "SYSTEM"
 
 class IngestionSourceEnum(str, Enum):
     USER_PLATFORM = "USER_PLATFORM"
@@ -40,5 +41,12 @@ class SignalSeverity(str, Enum):
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+
+class SignalType(str, Enum):
+    ATTACK_WEB = "ATTACK_WEB"
+    AUTH_ABUSE = "AUTH_ABUSE"
+    ATTACK_NETWORK = "ATTACK_NETWORK"
+    ANOMALY_BEHAVIOR = "ANOMALY_BEHAVIOR"
 
 

@@ -60,6 +60,10 @@ def require_role(required_role):
             role = request.headers.get("X-Role")
             platform = request.headers.get("X-Platform")
 
+            # Let target app internal calls pass immediately
+            if role == "SYSTEM":
+                return fn(*args, **kwargs)
+
             if platform != "SECURITY_PLATFORM":
                 return jsonify({"error": "Invalid platform", "code": "PLATFORM_VIOLATION"}), 403
 

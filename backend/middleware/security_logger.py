@@ -23,8 +23,14 @@ class SecurityLogger:
         if not has_request_context():
             return response
             
+        # Ignore any request originating from the internal security platform
+        # (suppresses background polling, dashboard metrics, etc.)
+        if request.headers.get('X-Platform') == 'SECURITY_PLATFORM':
+            return response
+
         # Ignore static files or health checks if needed
-        if request.path.startswith('/static') or request.path == '/api/v1/health':
+        IGNORE_PATHS = ['/static', '/api/v1/health']
+        if any(request.path.startswith(p) for p in IGNORE_PATHS):
             return response
             
         # Determine duration
@@ -57,6 +63,13 @@ class SecurityLogger:
         role = request.headers.get('X-Role', 'unknown')
         platform = request.headers.get('X-Platform', 'unknown')
         session_id = request.headers.get('X-Session-ID', None)
+        
+        # Fallback to JSON payload if headers are missing (common for telemetry)
+        if not session_id and request.is_json:
+            try:
+                session_id = request.get_json().get("session_id")
+            except:
+                pass
 
         payload = {
             "method": request.method,
@@ -74,3 +87,27 @@ class SecurityLogger:
 
 def init_security_logger(app):
     return SecurityLogger(app)
+
+def log_security_event(message, severity="INFO", metadata=None, session_id=None):
+    """
+    Standalone utility to log security events to the ingestion pipeline.
+    """
+    # Import inside to avoid circular dependencies
+    from backend.services.ingestion_service import IngestionService
+    
+    print(f"[SECURITY ALERT] {severity}: {message}")
+    
+    payload = {
+        "event_type": "SECURITY_ALERT",
+        "message": message,
+        "severity": severity,
+        "metadata": metadata or {},
+        "source": "autonomous_enforcement",
+        "session_id": session_id
+    }
+    
+    # We use ingest_http_event as a generic entry point
+    try:
+        IngestionService.ingest_http_event(payload)
+    except Exception as e:
+        print(f"Failed to log security event to ingestion service: {e}")

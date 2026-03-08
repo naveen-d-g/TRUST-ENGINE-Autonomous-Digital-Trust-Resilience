@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from backend.contracts.enums import SignalSeverity
+from backend.contracts.enums import SignalSeverity, SignalType
 
 class SignalContract(BaseModel):
     signal_id: str

@@ -61,7 +61,7 @@ export const SocDashboard: React.FC = () => {
             </div>
         </div>
         
-        <div className="flex items-center gap-2 p-1 bg-slate-900/50 border border-slate-800 rounded-xl">
+        <div className="flex items-center gap-2 p-1 bg-slate-900/50 border border-slate-800 rounded-xl overflow-x-auto custom-scrollbar max-w-full">
             {(['unified', 'web', 'api', 'system', 'network'] as const).map((tab) => (
                 <button
                     key={tab}
