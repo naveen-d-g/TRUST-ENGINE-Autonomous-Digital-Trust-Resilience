@@ -147,7 +147,7 @@ class InferenceService:
                 current_severity = severity_map.get(existing_session.final_decision, 0)
                 new_severity = severity_map.get(result.decision, 0)
                 
-                with open("inference_debug.log", "a") as f:
+                with open("logs/inference_debug.log", "a") as f:
                     f.write(f"[{datetime.utcnow()}] Session {session_id}: Current {existing_session.final_decision}({current_severity}), New {result.decision}({new_severity})\n")
                 
                 if new_severity >= current_severity:
@@ -164,7 +164,7 @@ class InferenceService:
                     if new_cause and new_cause not in generic_causes:
                         existing_session.primary_cause = new_cause
                 else:
-                    with open("inference_debug.log", "a") as f:
+                    with open("logs/inference_debug.log", "a") as f:
                         f.write(f"[{datetime.utcnow()}] Monotonic Guard: Keeping {existing_session.final_decision} over {result.decision}\n")
                 
                 # Check for recovery advice override from simulation

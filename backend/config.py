@@ -36,4 +36,4 @@ class Config:
     SESSION_ID_HEADER = "X-Session-ID"
     
     # Logging
-    LOG_FILE = os.getenv("LOG_FILE", "platform.log")
+    LOG_FILE = os.getenv("LOG_FILE", "logs/platform.log")

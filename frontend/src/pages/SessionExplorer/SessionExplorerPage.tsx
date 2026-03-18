@@ -17,35 +17,16 @@ const SessionExplorerPage = () => {
   }, [search, fetchSessions])
 
   return (
-    <div className="relative min-h-screen -mt-8 -mx-8 px-8 py-12 overflow-hidden">
-      {/* Premium Background Elements */}
-      <div className="absolute inset-0 cyber-grid opacity-20 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950 pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_50%)] pointer-events-none" />
-      
-      {/* Decorative Orbs */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/10 blur-[120px] rounded-full animate-pulse pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full animate-float pointer-events-none" />
-      
-      {/* Scanline Overlay */}
-      <div className="absolute inset-0 scanline opacity-[0.03] pointer-events-none" />
-
-      <div className="relative z-10 space-y-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-slate-950 px-8 py-8">
+      <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
         {/* Premium Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div className="space-y-2 animate-in slide-in-from-left-4 duration-700">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                <Globe size={20} className="text-primary animate-pulse" />
-              </div>
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic">Intelligence Flux</span>
-            </div>
-            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-2">
+          <div className="space-y-1 animate-in slide-in-from-left-4 duration-700">
+            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
               Session Explorer
             </h1>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-primary animate-ping" />
-              Deep Behavioral Analysis & Neural Risk Mapping
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.1em]">
+              Deep packet inspection & risk analysis
             </p>
           </div>
 
