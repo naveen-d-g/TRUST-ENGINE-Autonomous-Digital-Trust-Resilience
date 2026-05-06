@@ -3,16 +3,21 @@ import { useEffect, useState } from "react"
 import { Card } from "@/components/cards/Card"
 import { Button } from "@/components/buttons/Button"
 
-import { ArrowLeft, Activity, FileText } from "lucide-react"
+import { 
+    ArrowLeft, 
+    Activity, 
+    AlertTriangle, 
+    Info, 
+    CheckCircle, 
+    ShieldAlert, 
+    Zap, 
+    Shield 
+} from "lucide-react"
 import { useSessionStore } from "@/store/sessionStore"
 import { can } from '../../core/permissions/permissionUtils';
 import { Permissions } from '../../core/permissions/permissions';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts"
-import { ExplainabilityPanel } from "@/components/intelligence/ExplainabilityPanel"
-import { MLExplanation } from "@/types/explainability"
-
-
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 
 interface EvidenceItem {
     id: number;
@@ -22,22 +27,17 @@ interface EvidenceItem {
 }
 
 const SessionDetailsPage = () => {
-  // ... existing hooks
-  
   const { id } = useParams()
   const navigate = useNavigate()
   const { sessions, selectedSession, fetchById, terminateSession, getSessionLogs, loading, error } = useSessionStore()
   const [logs, setLogs] = useState<any[]>([]);
   const [showLogs, setShowLogs] = useState(false);
 
-  // Optimistic loading: Use cached session from list if available immediately
-  // This prevents the "Loading..." flash if we already have the data
   const cachedSession = sessions.find(s => s.id === id);
   const session = selectedSession?.id === id ? selectedSession : cachedSession;
 
   useEffect(() => {
     if (id) {
-       // Always fetch fresh data, but UI will show cached version in meantime
        fetchById(id);
     }
   }, [id, fetchById])
@@ -58,38 +58,69 @@ const SessionDetailsPage = () => {
     setShowLogs(!showLogs);
   };
 
-  const mlExplanation: MLExplanation | undefined = session ? {
-    risk_score: session.riskScore || 0,
-    decision: (session.decision === 'ALLOW' ? 'TRUSTED' : session.decision === 'ESCALATE' ? 'SUSPICIOUS' : session.decision === 'RESTRICT' ? 'MALICIOUS' : "SUSPICIOUS") as any,
-    feature_importance: [
-        { feature: "Geo Velocity", weight: session.riskScore > 50 ? 0.85 : 0.12 },
-        { feature: "Device Fingerprint", weight: session.riskScore > 30 ? -0.12 : 0.45 },
-        { feature: "Request Rate", weight: session.riskScore > 70 ? 0.65 : 0.20 },
-        { feature: "Time of Day", weight: 0.05 }
-    ],
-    anomaly_flags: session.riskScore > 50 ? ["High Entropy", "Velocity Spike"] : [],
-    llm_advisory: {
-        recommendation: session.recommendedAction || "No immediate action required. Session behavior is within normal parameters.",
-        confidence: session.riskScore > 0 ? 0.98 : 0.99
-    }
-  } : undefined
-
   if (loading && !session) return <div className="p-6 text-gray-400 animate-pulse">Loading session intelligence...</div>
   if (error && !session) return <div className="p-6 text-red-400">Error loading session: {error}</div>
   if (!session) return <div className="p-6 text-gray-400">Session not found</div>
 
-  // Mock Intelligence Data
-  // Dynamic Intelligence Data
-  const riskBreakdown = [
-      { name: "Behavior", risk: Math.min(100, session.riskScore * 1.2) },
-      { name: "Network", risk: session.riskScore > 50 ? 80 : 10 },
-      { name: "Identity", risk: session.primaryCause ? 90 : 10 },
-      { name: "Device", risk: session.riskScore > 30 ? 60 : 15 }
-  ]
-  
-  const trustData = [
-      { name: "Trust", value: Math.max(0, 100 - session.riskScore) },
-      { name: "Risk", value: session.riskScore }
+  // Generate Theme based on Decision
+  let theme = {
+      color: "text-gray-200",
+      bg: "bg-gray-800/50",
+      border: "border-gray-700",
+      donut: "#22c55e",
+      icon: Info,
+      defaultRec: "Continuous Passive Monitoring"
+  }
+
+  const decision = session.decision?.toUpperCase() || 'ANALYZING';
+
+  if (decision === 'RESTRICT' || decision === 'CHALLENGE') {
+      theme = {
+          color: "text-orange-500",
+          bg: "bg-orange-500/10",
+          border: "border-orange-500/20",
+          donut: "#f97316",
+          icon: AlertTriangle,
+          defaultRec: "Monitor Closely"
+      }
+  } else if (decision === 'ESCALATE' || decision === 'TERMINATE' || decision === 'TERMINATED') {
+      theme = {
+          color: "text-red-500",
+          bg: "bg-red-500/10",
+          border: "border-red-500/20",
+          donut: "#ef4444",
+          icon: ShieldAlert,
+          defaultRec: "Immediate Termination Recommended"
+      }
+  } else if (decision === 'ALLOW') {
+      theme = {
+          color: "text-emerald-500",
+          bg: "bg-emerald-500/10",
+          border: "border-emerald-500/20",
+          donut: "#22c55e",
+          icon: CheckCircle,
+          defaultRec: "No Action Required"
+      }
+  }
+
+  const IconComponent = theme.icon;
+
+  // Derived Indicators
+  const indicators = [];
+  if (session.primaryCause) indicators.push(`Flag: ${session.primaryCause}`);
+  if (session.riskScore > 50) {
+      indicators.push("Trust score drops abruptly");
+      indicators.push("High volume of unusual activity");
+  } else {
+      indicators.push("Behavior within normal parameters");
+  }
+
+  // Domain Confidence
+  const domains = [
+      { name: "Web Activity", score: session.riskScore > 70 ? 45 : 95, color: "bg-blue-500" },
+      { name: "Network", score: session.riskScore > 90 ? 20 : 100, color: "bg-emerald-500" },
+      { name: "Device Posture", score: 100, color: "bg-indigo-500" },
+      { name: "API Access", score: Math.max(10, 100 - session.riskScore), color: "bg-orange-500" }
   ]
 
   const evidence: EvidenceItem[] = [
@@ -98,146 +129,198 @@ const SessionDetailsPage = () => {
       session.riskScore >= 50 ? { id: 3, time: new Date(session.timestamp.getTime() + 2000).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }), label: "High Risk Threshold Met", type: "critical" } : null
   ].filter((e): e is EvidenceItem => e !== null)
 
+  const isTerminated = decision === 'TERMINATE' || decision === 'TERMINATED';
+
   return (
-    <div className="space-y-6 animate-in slide-in-from-right duration-300">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-           <Button variant="ghost" onClick={() => navigate(-1)}>
-             <ArrowLeft className="w-4 h-4" />
+           <Button variant="ghost" onClick={() => navigate(-1)} className="hover:bg-gray-800">
+             <ArrowLeft className="w-5 h-5 text-gray-400" />
            </Button>
-           <h1 className="text-2xl font-bold text-white tracking-wide">Session Intelligence</h1>
-           <span className="text-gray-500 font-mono text-sm mr-2">{session.id}</span>
-           
-           <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-gray-800">
-             <div className={`w-2 h-2 rounded-full ${session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? 'bg-gray-600' : 'bg-neonGreen animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`} />
-             <span className={session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? "text-gray-500 font-medium uppercase tracking-wider text-[10px]" : "text-neonGreen font-bold uppercase tracking-wider text-[10px]"}>
-               {session.decision === 'TERMINATE' || session.decision === 'TERMINATED' ? "Offline" : "Online"}
-             </span>
+           <div>
+               <div className="text-gray-500 text-xs font-medium tracking-widest uppercase mb-1">Session details</div>
+               <h1 className="text-2xl font-black text-white tracking-widest uppercase">{session.primaryCause || 'Session Event'}</h1>
+               <div className="text-gray-600 font-mono text-xs mt-1">{session.id}</div>
            </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
              {can(Permissions.REPLAY_SESSION) && (
-               <Button variant="secondary" onClick={handleViewLogs}>
+               <Button variant="secondary" onClick={handleViewLogs} className="bg-gray-800 hover:bg-gray-700 text-gray-300">
                    {showLogs ? 'Hide Raw Log' : 'View Raw Log'}
                </Button>
              )}
              {can(Permissions.TERMINATE_SESSION) && (
-               <Button variant="danger" onClick={handleTerminate} disabled={session.decision === 'TERMINATE'}>
-                   {session.decision === 'TERMINATE' ? 'Terminated' : 'Terminate Session'}
+               <Button variant="danger" onClick={handleTerminate} disabled={isTerminated} className="bg-red-600 hover:bg-red-700 text-white font-bold">
+                   {isTerminated ? 'TERMINATED' : 'TERMINATE SESSION'}
                </Button>
              )}
          </div>
       </div>
 
       {showLogs && (
-          <Card className="max-h-96 overflow-y-auto bg-slate-950 font-mono text-xs">
-              <pre className="text-green-400 p-4">{JSON.stringify(logs, null, 2)}</pre>
+          <Card className="max-h-96 overflow-y-auto bg-black border border-gray-800 font-mono text-xs p-0">
+              <pre className="text-green-400 p-6">{JSON.stringify(logs, null, 2)}</pre>
           </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Left Col: Trust & Risk */}
-        <div className="space-y-6">
-            <Card className="flex flex-col items-center justify-center p-6">
-                <h3 className="text-gray-400 uppercase tracking-widest text-xs mb-4">Trust Score Analysis</h3>
-                <div className="h-40 w-full relative">
-                     <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={trustData}
-                                innerRadius={40}
-                                outerRadius={60}
-                                dataKey="value"
-                                startAngle={90}
+      {/* Main Content Grid */}
+      <div className="flex flex-col lg:flex-row gap-6">
+          
+          {/* Left Column (Decision, Indicators, Domains) */}
+          <div className="flex-1 space-y-6">
+              
+              {/* Decision Box */}
+              <div className="bg-[#0f1115] border border-gray-800/60 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 lg:gap-10 items-stretch shadow-xl">
+                  {/* Decision Left */}
+                  <div className="flex items-center gap-5 flex-1 border-b md:border-b-0 md:border-r border-gray-800/60 pb-6 md:pb-0 md:pr-6">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg ${theme.bg} ${theme.border}`}>
+                          <IconComponent className={`w-7 h-7 ${theme.color}`} />
+                      </div>
+                      <div>
+                          <div className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Current Decision</div>
+                          <div className={`text-4xl font-black uppercase italic tracking-wider drop-shadow-md ${theme.color}`}>
+                              {decision}
+                          </div>
+                      </div>
+                  </div>
+                  
+                  {/* Decision Right (Recommendation) */}
+                  <div className="flex-1 flex flex-col justify-center bg-gray-900/40 rounded-xl p-5 border border-gray-800/40">
+                      <div className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Recommended Action</div>
+                      <div className="text-gray-200 font-bold text-lg leading-tight mb-2">
+                          {session.recommendedAction || theme.defaultRec}
+                      </div>
+                      <div className="text-gray-500 text-xs italic flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-70"></div>
+                          Your security review matches with ML recommendation.
+                      </div>
+                  </div>
+              </div>
+
+              {/* Indicators & Domains Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  
+                  {/* Threat Indicators */}
+                  <div className="bg-[#0f1115] border border-gray-800/60 rounded-2xl p-6 shadow-lg">
+                      <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
+                          <Zap className="w-3.5 h-3.5 text-yellow-500" />
+                          Threat Indicators
+                      </h3>
+                      <div className="space-y-3">
+                          {indicators.map((ind, idx) => (
+                              <div key={idx} className="bg-gray-900/60 border border-gray-800/60 p-4 rounded-xl text-sm text-gray-300 font-medium flex items-start gap-3">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-gray-600 mt-1.5 shrink-0"></div>
+                                  <span>{ind}</span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+
+                  {/* Domain Confidence */}
+                  <div className="bg-[#0f1115] border border-gray-800/60 rounded-2xl p-6 shadow-lg">
+                      <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
+                          <Shield className="w-3.5 h-3.5 text-blue-500" />
+                          Domain Confidence Scores
+                      </h3>
+                      <div className="space-y-5">
+                          {domains.map((dom, idx) => (
+                              <div key={idx}>
+                                  <div className="flex justify-between text-[11px] font-bold text-gray-400 mb-2 uppercase tracking-wider">
+                                      <span>{dom.name}</span>
+                                      <span className="text-white">{dom.score}%</span>
+                                  </div>
+                                  <div className="h-2 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-800/50">
+                                      <div className={`h-full ${dom.color} transition-all duration-1000 ease-out`} style={{width: `${dom.score}%`}} />
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          {/* Right Column (Donut Chart) */}
+          <div className="w-full lg:w-80 flex flex-col space-y-6">
+              <div className="bg-[#0f1115] border border-gray-800/60 rounded-2xl p-6 shadow-lg flex-1 flex flex-col">
+                  <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 text-center pt-2">
+                      Session Trust Score
+                  </h3>
+                  <div className="flex-1 flex items-center justify-center relative min-h-[240px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                              {/* Background ring */}
+                              <Pie 
+                                data={[{value: 100}]} 
+                                dataKey="value" 
+                                cx="50%" 
+                                cy="50%" 
+                                innerRadius={85} 
+                                outerRadius={110} 
+                                fill="#1f2937" 
+                                stroke="none" 
+                              />
+                              {/* Foreground ring */}
+                              <Pie 
+                                data={[{value: session.trustScore}, {value: 100 - session.trustScore}]} 
+                                dataKey="value" 
+                                cx="50%" 
+                                cy="50%" 
+                                innerRadius={85} 
+                                outerRadius={110} 
+                                stroke="none" 
+                                cornerRadius={12} 
+                                startAngle={90} 
                                 endAngle={-270}
-                            >
-                                <Cell fill="#22C55E" />
-                                <Cell fill="#EF4444" />
-                            </Pie>
-                        </PieChart>
-                     </ResponsiveContainer>
-                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                         <span className="text-2xl font-bold text-white">{session.riskScore}</span>
-                     </div>
-                </div>
-            </Card>
+                                animationDuration={1500}
+                              >
+                                  <Cell fill={theme.donut} />
+                                  <Cell fill="transparent" />
+                              </Pie>
+                          </PieChart>
+                      </ResponsiveContainer>
+                      
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <div className="text-5xl font-black text-white tracking-tighter">
+                              {session.trustScore.toFixed(1)}
+                          </div>
+                          <div className={`text-[10px] font-bold uppercase tracking-[0.2em] mt-2 ${theme.color}`}>
+                              {session.riskScore > 50 ? 'Risk' : 'Trust'}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
 
-            <Card>
-                <h3 className="text-gray-400 uppercase tracking-widest text-xs mb-4">Risk Factor Breakdown</h3>
-                <div className="h-40 w-full">
-                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={riskBreakdown} layout="vertical">
-                            <XAxis type="number" hide />
-                            <YAxis type="category" dataKey="name" width={60} stroke="#6B7280" fontSize={12} />
-                            <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: '#111827' }} />
-                            <Bar dataKey="risk" radius={[0, 4, 4, 0]} barSize={16}>
-                                {riskBreakdown.map((e, i) => (
-                                    <Cell key={i} fill={e.risk > 50 ? "#EF4444" : "#3B82F6"} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                     </ResponsiveContainer>
-                </div>
-            </Card>
-        </div>
-
-        {/* Center Col: Evidence & ML */}
-        <div className="md:col-span-2 space-y-6">
-             {/* ML Explanation Block */}
-             <ExplainabilityPanel explanation={mlExplanation} />
-
-             {/* Evidence Timeline */}
-             <Card>
-                 <div className="flex items-center gap-2 mb-4 text-white">
-                     <Activity className="w-5 h-5 text-neonBlue" />
-                     <h3 className="font-bold">Evidence Timeline</h3>
-                 </div>
-                 <div className="space-y-4">
-                     {evidence.map((e: EvidenceItem, i) => (
-                         <div key={i} className="flex gap-4">
-                             <div className="text-xs text-gray-500 w-16 pt-1 font-mono">{e.time}</div>
-                             <div className="flex flex-col items-center">
-                                 <div className={`w-3 h-3 rounded-full mt-1 ${
-                                     e.type === "critical" ? "bg-neonRed" : 
-                                     e.type === "warning" ? "bg-neonOrange" : "bg-neonBlue"
-                                 }`}></div>
-                                 {i < evidence.length - 1 && <div className="w-0.5 h-full bg-gray-800 my-1"></div>}
-                             </div>
-                             <div className="pb-4">
-                                 <div className="text-sm text-white font-medium">{e.label}</div>
-                             </div>
-                         </div>
-                     ))}
-                 </div>
-             </Card>
-
-             {/* LLM Advisory */}
-             <Card>
-                 <div className="flex items-center gap-2 mb-4 text-neonGreen">
-                     <FileText className="w-5 h-5" />
-                     <h3 className="font-bold">Suggested Remediation</h3>
-                 </div>
-                 <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
-                     {session.recommendedAction ? (
-                        <li>{session.recommendedAction}</li>
-                     ) : (
-                        <li>No specific remediation actions suggested by the engine.</li>
-                     )}
-                     {session.riskScore > 50 && (
-                        <li>Watchlist added for IP subnet {session.ipAddress.split('.').slice(0,3).join('.')}.x</li>
-                     )}
-                     {session.riskScore > 85 ? (
-                        <li className="text-neonRed font-bold flex items-center gap-2">
-                            [ Recommended: Terminate Session ] - Critical risk threshold exceeded.
-                        </li>
-                     ) : session.riskScore > 80 && (
-                        <li>Recommend forcing password reset if velocity persists.</li>
-                     )}
-                 </ul>
-             </Card>
-        </div>
+      {/* Optional: Keep Evidence Timeline at bottom as requested in plan */}
+      <div className="pt-6">
+          <Card className="bg-[#0f1115] border-gray-800/60 shadow-lg">
+              <div className="flex items-center gap-2 mb-6 text-white px-2">
+                  <Activity className="w-5 h-5 text-blue-500" />
+                  <h3 className="font-bold tracking-wide">Historical Evidence Timeline</h3>
+              </div>
+              <div className="space-y-6 px-2 pb-4">
+                  {evidence.map((e: EvidenceItem, i) => (
+                      <div key={i} className="flex gap-6 relative group">
+                          <div className="text-[11px] text-gray-500 w-24 pt-0.5 font-mono text-right shrink-0">{e.time.split(', ')[1]}</div>
+                          <div className="flex flex-col items-center relative z-10">
+                              <div className={`w-3 h-3 rounded-full border-[3px] border-[#0f1115] ${
+                                  e.type === "critical" ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : 
+                                  e.type === "warning" ? "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                              }`}></div>
+                              {i < evidence.length - 1 && <div className="absolute top-3 bottom-[-24px] w-0.5 bg-gray-800 group-hover:bg-gray-700 transition-colors"></div>}
+                          </div>
+                          <div className="pb-2 flex-1">
+                              <div className="text-sm text-gray-200 font-medium">{e.label}</div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">{e.type}</div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </Card>
       </div>
     </div>
   )

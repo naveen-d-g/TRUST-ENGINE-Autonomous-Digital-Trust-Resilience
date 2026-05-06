@@ -25,6 +25,7 @@ def get_summary():
         recent_window = datetime.utcnow() - timedelta(minutes=5)
         avg_trust_val = db.session.query(func.avg(Session.trust_score))\
             .filter(Session.last_seen >= recent_window)\
+            .filter(Session.final_decision != 'TERMINATED')\
             .filter(Session.primary_cause != 'Terminated (System Reset)').scalar()
             
         if avg_trust_val is None:

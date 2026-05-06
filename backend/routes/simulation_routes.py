@@ -128,8 +128,24 @@ def trigger_attack():
         
         
         analysis = event_result.get('analysis')
-        risk_score = getattr(analysis, 'risk_score', 0.0)
-        decision = getattr(analysis, 'decision', 'ALLOW')
+        
+        if isinstance(analysis, dict):
+            risk_score = analysis.get('risk_score', 0.0)
+            decision = analysis.get('decision', 'ALLOW')
+            analysis_dict = analysis
+        elif analysis:
+            risk_score = getattr(analysis, 'risk_score', 0.0)
+            decision = getattr(analysis, 'decision', 'ALLOW')
+            try:
+                from dataclasses import asdict
+                analysis_dict = asdict(analysis)
+            except TypeError:
+                analysis_dict = {}
+        else:
+            risk_score = 0.0
+            decision = 'ALLOW'
+            analysis_dict = {}
+            
         trust_score = 100.0 - float(risk_score)
         print(f"[DEBUG] Recorded event, new trust score: {trust_score}, decision: {decision}")
         
@@ -153,7 +169,7 @@ def trigger_attack():
             "attack_type": attack_type,
             "trust_score": trust_score,
             "decision": decision,
-            "analysis": asdict(analysis) if analysis else {}
+            "analysis": analysis_dict
         }), 200
         
     except Exception as e:

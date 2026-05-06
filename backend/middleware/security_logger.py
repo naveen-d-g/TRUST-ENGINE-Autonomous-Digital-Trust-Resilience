@@ -23,6 +23,10 @@ class SecurityLogger:
         if not has_request_context():
             return response
             
+        # Ignore CORS preflight OPTIONS requests
+        if request.method == 'OPTIONS':
+            return response
+            
         # Ignore any request originating from the internal security platform
         # (suppresses background polling, dashboard metrics, etc.)
         if request.headers.get('X-Platform') == 'SECURITY_PLATFORM':

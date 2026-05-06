@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  ChevronDown, 
-  Info, 
-  Bot,
-  ShieldCheck
+  ExternalLink
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface SessionExplorerTableProps {
   data: any[];
@@ -12,7 +10,7 @@ interface SessionExplorerTableProps {
 }
 
 export const SessionExplorerTable: React.FC<SessionExplorerTableProps> = ({ data, isLoading }) => {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -63,8 +61,8 @@ export const SessionExplorerTable: React.FC<SessionExplorerTableProps> = ({ data
               return (
                 <React.Fragment key={session.id}>
                   <tr 
-                    className={`group hover:bg-white/[0.02] cursor-pointer transition-colors ${expandedRow === session.id ? 'bg-white/[0.04]' : ''}`}
-                    onClick={() => setExpandedRow(expandedRow === session.id ? null : session.id)}
+                    className="group hover:bg-white/[0.02] cursor-pointer transition-colors"
+                    onClick={() => navigate(`/sessions/${session.id}`)}
                   >
                     <td className="px-6 py-5">
                       <span className="text-[11px] font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-500/30">
@@ -118,52 +116,9 @@ export const SessionExplorerTable: React.FC<SessionExplorerTableProps> = ({ data
                       </span>
                     </td>
                     <td className="px-4 py-5 text-center">
-                      <ChevronDown size={14} className={`text-slate-600 transition-transform duration-300 ${expandedRow === session.id ? 'rotate-180' : ''}`} />
+                      <ExternalLink size={14} className="text-slate-600 group-hover:text-primary transition-colors" />
                     </td>
                   </tr>
-
-                  {/* Expanded Content */}
-                  {expandedRow === session.id && (
-                    <tr className="bg-black/20">
-                      <td colSpan={8} className="p-0 border-t border-white/5">
-                        <div className="px-12 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8 border-l-2 border-primary">
-                          <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center gap-2">
-                              <Info size={12} className="text-primary" />
-                              <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cognitive Analysis</h4>
-                            </div>
-                            <div className="bg-slate-900/40 p-6 rounded border border-white/5">
-                              <p className="text-xs text-slate-400 mb-4">
-                                Intelligence stream behavior vector matched: <span className="text-white font-bold">"{session.primary_cause || 'Routine Activity'}"</span>
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {JSON.parse(session.risk_reasons || '[]').map((reason: string, i: number) => (
-                                  <span key={i} className="px-2 py-1 bg-slate-950 rounded text-[8px] font-bold text-slate-500 border border-white/5 uppercase tracking-widest">
-                                    {reason}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                              <Bot size={12} className="text-purple-400" />
-                              <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Autonomous Logic</h4>
-                            </div>
-                            <div className="bg-purple-500/5 p-6 rounded border border-purple-500/20">
-                              <div className="flex items-center gap-3 mb-4">
-                                <ShieldCheck size={16} className="text-purple-400" />
-                                <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Security Protocol Activated</span>
-                              </div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-relaxed">
-                                {session.recommended_action || 'Continuous observation.'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </React.Fragment>
               );
             })}

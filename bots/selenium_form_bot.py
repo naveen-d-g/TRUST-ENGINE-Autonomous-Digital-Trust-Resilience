@@ -179,7 +179,7 @@ def run_selenium_bot(url, iterations, custom_username=None, custom_password=None
          print(f"Bot stopped due to error: {e}")
     finally:
          driver.quit()
-         print(f"\nUnified Bot Run Summary:")
+         print(f"\nUnified Bot Run Summary:")   
          print(f"Total Attempts: {iterations}")
          print(f"Form Submissions: {success_count}")
 
